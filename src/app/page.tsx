@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { ChangeEvent } from "react";
 import {
   BrainCircuit,
@@ -11,6 +11,8 @@ import {
   Upload,
   Loader2,
   Palette,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,6 +149,41 @@ export default function MindMapEditor() {
     }
   };
 
+  const handleNodeDoubleClick = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    setNodes(prevNodes => prevNodes.map(n => 
+        n.id === nodeId ? { ...n, isCollapsed: !n.isCollapsed } : n
+    ));
+  };
+
+  const getChildNodeIds = useCallback((nodeId: string, currentLinks: MindMapLink[]): string[] => {
+    const directChildren = currentLinks.filter(l => l.sourceId === nodeId).map(l => l.targetId);
+    let allChildren = [...directChildren];
+    directChildren.forEach(childId => {
+        const node = nodes.find(n => n.id === childId);
+        if (node && !node.isCollapsed) {
+            allChildren = [...allChildren, ...getChildNodeIds(childId, currentLinks)];
+        }
+    });
+    return allChildren;
+  }, [nodes]);
+
+  const visibleNodes = useMemo(() => {
+    const hiddenNodeIds = new Set<string>();
+    nodes.forEach(node => {
+        if (node.isCollapsed) {
+            const childrenToHide = getChildNodeIds(node.id, links);
+            childrenToHide.forEach(id => hiddenNodeIds.add(id));
+        }
+    });
+    return nodes.filter(n => !hiddenNodeIds.has(n.id));
+  }, [nodes, links, getChildNodeIds]);
+
+  const visibleLinks = useMemo(() => {
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+    return links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
+  }, [links, visibleNodes]);
+
   const handleAddNode = () => {
     const newNode: MindMapNode = {
       id: `n-${Date.now()}`,
@@ -282,14 +319,16 @@ export default function MindMapEditor() {
     const startY = sourceNode.y + sourceNode.height / 2;
     const endX = targetNode.x;
     const endY = targetNode.y + targetNode.height / 2;
-
-    const c1x = startX + (endX - startX) / 2;
+    
+    const c1x = startX + (endX - startX) * 0.5;
     const c1y = startY;
-    const c2x = c1x;
+    const c2x = endX - (endX - startX) * 0.5;
     const c2y = endY;
 
     return `M ${startX},${startY} C ${c1x},${c1y} ${c2x},${c2y} ${endX},${endY}`;
   }, [nodes]);
+
+  const hasChildren = (nodeId: string) => links.some(link => link.sourceId === nodeId);
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body">
@@ -323,7 +362,7 @@ export default function MindMapEditor() {
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
 
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <path
                 key={link.id}
                 d={getLinkPath(link)}
@@ -331,12 +370,13 @@ export default function MindMapEditor() {
                 className="stroke-muted-foreground/60 fill-none"
               />
             ))}
-            {nodes.map((node) => (
+            {visibleNodes.map((node) => (
               <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
                 onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                 onClick={(e) => handleNodeClick(e, node.id)}
+                onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
                 className="cursor-pointer group"
               >
                 <rect
@@ -362,6 +402,14 @@ export default function MindMapEditor() {
                 >
                   {node.text}
                 </text>
+                 {hasChildren(node.id) && (
+                    <g transform={`translate(${node.width - 16}, ${node.height - 16})`}>
+                       {node.isCollapsed 
+                       ? <ChevronDown className="w-4 h-4 text-gray-800" /> 
+                       : <ChevronUp className="w-4 h-4 text-gray-800" />
+                       }
+                    </g>
+                )}
               </g>
             ))}
              {linkingState && nodes.find(n => n.id === linkingState.sourceId) && (

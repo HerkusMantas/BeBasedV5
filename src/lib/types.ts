@@ -3,10 +3,11 @@ export interface MindMapNode {
   x: number;
   y: number;
   text: string;
-  type: "main" | "sub" | "detail";
+  type: 'main' | 'sub' | 'detail';
   color: string;
   width: number;
   height: number;
+  isCollapsed?: boolean;
 }
 
 export interface MindMapLink {
