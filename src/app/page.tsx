@@ -117,34 +117,53 @@ export default function MindMapEditor() {
   }, [links, visibleNodes]);
 
   const handleAddNode = (type: 'folder' | 'canvas') => {
-    const parentNode = selectedNodeId 
-      ? nodes.find(n => n.id === selectedNodeId)
-      : nodes.find(n => n.id === '1'); // Default to Central Idea if nothing is selected
+    let newNode: MindMapNode;
+    if (type === 'folder') {
+        const folderNodes = nodes.filter(n => n.type === 'folder');
+        const lastFolderNode = folderNodes[folderNodes.length -1] || nodes.find(n => n.id === '1');
+        const newY = lastFolderNode ? lastFolderNode.y + lastFolderNode.height + 20 : 20;
+        
+        newNode = {
+            id: `n-${Date.now()}`,
+            x: 20,
+            y: newY,
+            text: "New Folder",
+            type: "folder",
+            color: "#60a5fa",
+            width: 150,
+            height: 50,
+        };
+        setNodes((prev) => [...prev, newNode]);
 
-    if (!parentNode) return;
+    } else { // canvas
+        const parentNode = selectedNodeId 
+        ? nodes.find(n => n.id === selectedNodeId)
+        : nodes.find(n => n.id === '1'); 
 
-    const newNode: MindMapNode = {
-      id: `n-${Date.now()}`,
-      x: parentNode.x + parentNode.width + 50,
-      y: parentNode.y,
-      text: type === 'folder' ? "New Folder" : "New Canvas",
-      type: type,
-      color: type === 'folder' ? "#f6ad55" : "#a7f3d0",
-      width: 150,
-      height: 50,
-    };
+        if (!parentNode) return;
 
-    setNodes((prev) => [...prev, newNode]);
-    
-    if (parentNode) {
-        const newLink: MindMapLink = {
-            id: `l-${Date.now()}`,
-            sourceId: parentNode.id,
-            targetId: newNode.id,
+        newNode = {
+            id: `n-${Date.now()}`,
+            x: parentNode.x + parentNode.width + 50,
+            y: parentNode.y,
+            text: "New Canvas",
+            type: type,
+            color: "#a7f3d0",
+            width: 150,
+            height: 50,
+        };
+
+        setNodes((prev) => [...prev, newNode]);
+        
+        if (parentNode) {
+            const newLink: MindMapLink = {
+                id: `l-${Date.now()}`,
+                sourceId: parentNode.id,
+                targetId: newNode.id,
+            }
+            setLinks(prev => [...prev, newLink]);
         }
-        setLinks(prev => [...prev, newLink]);
     }
-
     setSelectedNodeId(newNode.id);
   };
   
