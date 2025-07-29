@@ -278,12 +278,17 @@ export default function MindMapEditor() {
 
     if (!sourceNode || !targetNode) return "";
 
-    const startX = sourceNode.x + sourceNode.width / 2;
+    const startX = sourceNode.x + sourceNode.width;
     const startY = sourceNode.y + sourceNode.height / 2;
-    const endX = targetNode.x + targetNode.width / 2;
+    const endX = targetNode.x;
     const endY = targetNode.y + targetNode.height / 2;
 
-    return `M ${startX},${startY} C ${startX + 100},${startY} ${endX - 100},${endY} ${endX},${endY}`;
+    const c1x = startX + (endX - startX) / 2;
+    const c1y = startY;
+    const c2x = c1x;
+    const c2y = endY;
+
+    return `M ${startX},${startY} C ${c1x},${c1y} ${c2x},${c2y} ${endX},${endY}`;
   }, [nodes]);
 
   return (
