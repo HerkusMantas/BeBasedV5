@@ -43,32 +43,9 @@ const initialNodes: MindMapNode[] = [
     width: 150,
     height: 60,
   },
-  {
-    id: "2",
-    x: 550,
-    y: 150,
-    text: "Sub-topic 1",
-    type: "canvas",
-    color: "#93c5fd",
-    width: 150,
-    height: 50,
-  },
-  {
-    id: "3",
-    x: 550,
-    y: 250,
-    text: "Sub-topic 2",
-    type: "canvas",
-    color: "#93c5fd",
-    width: 150,
-    height: 50,
-  },
 ];
 
-const initialLinks: MindMapLink[] = [
-  { id: "l1", sourceId: "1", targetId: "2" },
-  { id: "l2", sourceId: "1", targetId: "3" },
-];
+const initialLinks: MindMapLink[] = [];
 
 export default function MindMapEditor() {
   const { toast } = useToast();
