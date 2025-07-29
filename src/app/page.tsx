@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useCallback, type ChangeEvent, useMemo } from "react";
@@ -386,7 +387,7 @@ export default function MindMapEditor() {
                 d={getLinkPath(link)}
                 strokeWidth="2"
                 className="stroke-muted-foreground/60 fill-none"
-                markerEnd="url(#arrowhead)"
+                markerEnd={link.sourceId === '1' || (nodes.find(n => n.id === link.sourceId)?.type === 'folder' && nodes.find(n => n.id === link.targetId)?.type === 'folder') ? "" : "url(#arrowhead)"}
               />
             ))}
             {visibleNodes.map((node) => (
@@ -534,3 +535,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
