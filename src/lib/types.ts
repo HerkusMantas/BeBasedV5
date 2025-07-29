@@ -3,7 +3,7 @@ export interface MindMapNode {
   x: number;
   y: number;
   text: string;
-  type: 'main' | 'sub' | 'detail';
+  type: 'folder' | 'canvas';
   color: string;
   width: number;
   height: number;

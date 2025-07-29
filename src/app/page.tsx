@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import type { ChangeEvent } from "react";
 import {
   BrainCircuit,
@@ -13,6 +13,8 @@ import {
   Palette,
   ChevronUp,
   ChevronDown,
+  Folder,
+  Paintbrush,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +39,7 @@ const initialNodes: MindMapNode[] = [
     x: 300,
     y: 200,
     text: "Central Idea",
-    type: "main",
+    type: "folder",
     color: "#60a5fa",
     width: 150,
     height: 60,
@@ -47,7 +49,7 @@ const initialNodes: MindMapNode[] = [
     x: 550,
     y: 150,
     text: "Sub-topic 1",
-    type: "sub",
+    type: "canvas",
     color: "#93c5fd",
     width: 150,
     height: 50,
@@ -57,7 +59,7 @@ const initialNodes: MindMapNode[] = [
     x: 550,
     y: 250,
     text: "Sub-topic 2",
-    type: "sub",
+    type: "canvas",
     color: "#93c5fd",
     width: 150,
     height: 50,
@@ -184,14 +186,14 @@ export default function MindMapEditor() {
     return links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
   }, [links, visibleNodes]);
 
-  const handleAddNode = () => {
+  const handleAddNode = (type: 'folder' | 'canvas') => {
     const newNode: MindMapNode = {
       id: `n-${Date.now()}`,
       x: 100,
       y: 100,
-      text: "New Node",
-      type: "sub",
-      color: "#a7f3d0",
+      text: type === 'folder' ? "New Folder" : "New Canvas",
+      type: type,
+      color: type === 'folder' ? "#f6ad55" : "#a7f3d0",
       width: 150,
       height: 50,
     };
@@ -249,7 +251,7 @@ export default function MindMapEditor() {
       x: sourceNode.x + sourceNode.width + 100,
       y: sourceNode.y,
       text,
-      type: "detail",
+      type: "canvas",
       color: "#fde68a",
       width: 150,
       height: 50,
@@ -309,7 +311,7 @@ export default function MindMapEditor() {
     e.target.value = ''; // Reset file input
   };
   
-  const getLinkPath = useCallback((link: MindMapLink) => {
+  const getLinkPath = (link: MindMapLink) => {
     const sourceNode = nodes.find(n => n.id === link.sourceId);
     const targetNode = nodes.find(n => n.id === link.targetId);
 
@@ -326,7 +328,7 @@ export default function MindMapEditor() {
     const c2y = endY;
 
     return `M ${startX},${startY} C ${c1x},${c1y} ${c2x},${c2y} ${endX},${endY}`;
-  }, [nodes]);
+  };
 
   const hasChildren = (nodeId: string) => links.some(link => link.sourceId === nodeId);
 
@@ -338,7 +340,8 @@ export default function MindMapEditor() {
           <h1 className="text-xl font-bold font-headline">Mind Weaver</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleAddNode}><Plus className="mr-2 h-4 w-4" /> New Node</Button>
+          <Button variant="outline" size="sm" onClick={() => handleAddNode('folder')}><Folder className="mr-2 h-4 w-4" /> New Folder</Button>
+          <Button variant="outline" size="sm" onClick={() => handleAddNode('canvas')}><Paintbrush className="mr-2 h-4 w-4" /> New Canvas</Button>
           <Button variant="outline" size="sm" onClick={handleSave}><Download className="mr-2 h-4 w-4" /> Save</Button>
           <Button variant="outline" size="sm" onClick={handleLoadClick}><Upload className="mr-2 h-4 w-4" /> Load</Button>
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
@@ -436,6 +439,9 @@ export default function MindMapEditor() {
             <Card>
               <CardHeader>
                 <CardTitle>Node Properties</CardTitle>
+                <CardDescription>
+                  Type: {selectedNode.type.charAt(0).toUpperCase() + selectedNode.type.slice(1)}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
