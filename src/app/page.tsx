@@ -118,34 +118,66 @@ export default function MindMapEditor() {
 
   const handleAddNode = (type: 'folder' | 'canvas') => {
     let newNode: MindMapNode;
+    const parentNode = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) : null;
+
     if (type === 'folder') {
-        const folderNodes = nodes.filter(n => n.type === 'folder');
-        const lastFolderNode = folderNodes[folderNodes.length -1] || nodes.find(n => n.id === '1');
-        const newY = lastFolderNode ? lastFolderNode.y + lastFolderNode.height + 20 : 20;
-        
-        newNode = {
-            id: `n-${Date.now()}`,
-            x: 20,
-            y: newY,
-            text: "New Folder",
-            type: "folder",
-            color: "#60a5fa",
-            width: 150,
-            height: 50,
-        };
-        setNodes((prev) => [...prev, newNode]);
+        if (parentNode && parentNode.type === 'folder') {
+            // Create a nested folder
+            newNode = {
+                id: `n-${Date.now()}`,
+                x: parentNode.x + 30, // Indent for nesting
+                y: parentNode.y + parentNode.height + 20,
+                text: "New Folder",
+                type: "folder",
+                color: "#60a5fa",
+                width: 150,
+                height: 50,
+            };
+            
+            const newLink: MindMapLink = {
+              id: `l-${Date.now()}`,
+              sourceId: parentNode.id,
+              targetId: newNode.id,
+            }
 
+            // Shift subsequent nodes down
+            const nodesToUpdate = nodes.map(node => {
+                if (node.y > parentNode.y) {
+                    return {...node, y: node.y + 70}; // shift by node height + gap
+                }
+                return node;
+            });
+
+            setNodes([...nodesToUpdate, newNode]);
+            setLinks(prev => [...prev, newLink]);
+
+        } else {
+             // Create a root-level folder
+            const folderNodes = nodes.filter(n => n.type === 'folder' && !links.some(l => l.targetId === n.id));
+            const lastFolderNode = folderNodes[folderNodes.length -1] || nodes.find(n => n.id === '1');
+            const newY = lastFolderNode ? lastFolderNode.y + lastFolderNode.height + 20 : 20;
+            
+            newNode = {
+                id: `n-${Date.now()}`,
+                x: 20,
+                y: newY,
+                text: "New Folder",
+                type: "folder",
+                color: "#60a5fa",
+                width: 150,
+                height: 50,
+            };
+            setNodes((prev) => [...prev, newNode]);
+        }
     } else { // canvas
-        const parentNode = selectedNodeId 
-        ? nodes.find(n => n.id === selectedNodeId)
-        : nodes.find(n => n.id === '1'); 
+        const canvasParentNode = parentNode || nodes.find(n => n.id === '1'); 
 
-        if (!parentNode) return;
+        if (!canvasParentNode) return;
 
         newNode = {
             id: `n-${Date.now()}`,
-            x: parentNode.x + parentNode.width + 50,
-            y: parentNode.y,
+            x: canvasParentNode.x + canvasParentNode.width + 50,
+            y: canvasParentNode.y,
             text: "New Canvas",
             type: type,
             color: "#a7f3d0",
@@ -155,10 +187,10 @@ export default function MindMapEditor() {
 
         setNodes((prev) => [...prev, newNode]);
         
-        if (parentNode) {
+        if (canvasParentNode) {
             const newLink: MindMapLink = {
                 id: `l-${Date.now()}`,
-                sourceId: parentNode.id,
+                sourceId: canvasParentNode.id,
                 targetId: newNode.id,
             }
             setLinks(prev => [...prev, newLink]);
@@ -282,6 +314,15 @@ export default function MindMapEditor() {
     const targetNode = nodes.find(n => n.id === link.targetId);
 
     if (!sourceNode || !targetNode) return "";
+    
+    // For nested folders, draw a vertical line
+    if (sourceNode.type === 'folder' && targetNode.type === 'folder') {
+        const startX = sourceNode.x + sourceNode.width / 2;
+        const startY = sourceNode.y + sourceNode.height;
+        const endX = targetNode.x + targetNode.width / 2;
+        const endY = targetNode.y;
+        return `M ${startX},${startY} L ${endX},${endY}`;
+    }
 
     const startX = sourceNode.x + sourceNode.width;
     const startY = sourceNode.y + sourceNode.height / 2;
