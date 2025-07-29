@@ -87,7 +87,7 @@ export default function MindMapEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+  const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
   const handleNodeMouseDown = (
     e: React.MouseEvent<SVGGElement>,
@@ -415,7 +415,7 @@ export default function MindMapEditor() {
                   {node.text}
                 </text>
                  {hasChildren(node.id) && (
-                    <g transform={`translate(${node.width - 16}, ${node.height - 16})`}>
+                    <g transform={`translate(${node.width / 2 - 8}, ${node.height - 20})`}>
                        {node.isCollapsed 
                        ? <ChevronDown className="w-4 h-4 text-gray-800" /> 
                        : <ChevronUp className="w-4 h-4 text-gray-800" />
