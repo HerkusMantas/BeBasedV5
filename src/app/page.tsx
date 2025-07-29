@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo, type ChangeEvent } from "react";
+import { useState, useRef, useCallback, type ChangeEvent, useMemo } from "react";
 import {
   BrainCircuit,
   Plus,
@@ -35,8 +35,8 @@ import { suggestConcepts } from "@/ai/flows/suggest-concepts";
 const initialNodes: MindMapNode[] = [
   {
     id: "1",
-    x: 300,
-    y: 200,
+    x: 50,
+    y: 50,
     text: "Central Idea",
     type: "folder",
     color: "#60a5fa",
