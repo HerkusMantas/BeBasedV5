@@ -356,6 +356,17 @@ export default function MindMapEditor() {
             onClick={() => { setSelectedNodeId(null); setLinkingState(null); }}
           >
             <defs>
+              <marker
+                id="arrowhead"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 10 5 L 0 10 z" className="fill-muted-foreground/60" />
+              </marker>
               <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
                 <circle cx="1" cy="1" r="1" className="fill-muted-foreground/30"></circle>
               </pattern>
@@ -368,6 +379,7 @@ export default function MindMapEditor() {
                 d={getLinkPath(link)}
                 strokeWidth="2"
                 className="stroke-muted-foreground/60 fill-none"
+                markerEnd="url(#arrowhead)"
               />
             ))}
             {visibleNodes.map((node) => (
