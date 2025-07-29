@@ -117,17 +117,34 @@ export default function MindMapEditor() {
   }, [links, visibleNodes]);
 
   const handleAddNode = (type: 'folder' | 'canvas') => {
+    const parentNode = selectedNodeId 
+      ? nodes.find(n => n.id === selectedNodeId)
+      : nodes.find(n => n.id === '1'); // Default to Central Idea if nothing is selected
+
+    if (!parentNode) return;
+
     const newNode: MindMapNode = {
       id: `n-${Date.now()}`,
-      x: 100,
-      y: 100,
+      x: parentNode.x + parentNode.width + 50,
+      y: parentNode.y,
       text: type === 'folder' ? "New Folder" : "New Canvas",
       type: type,
       color: type === 'folder' ? "#f6ad55" : "#a7f3d0",
       width: 150,
       height: 50,
     };
+
     setNodes((prev) => [...prev, newNode]);
+    
+    if (parentNode) {
+        const newLink: MindMapLink = {
+            id: `l-${Date.now()}`,
+            sourceId: parentNode.id,
+            targetId: newNode.id,
+        }
+        setLinks(prev => [...prev, newLink]);
+    }
+
     setSelectedNodeId(newNode.id);
   };
   
