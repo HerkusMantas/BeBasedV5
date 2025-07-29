@@ -35,8 +35,8 @@ import { suggestConcepts } from "@/ai/flows/suggest-concepts";
 const initialNodes: MindMapNode[] = [
   {
     id: "1",
-    x: 50,
-    y: 50,
+    x: 20,
+    y: 20,
     text: "Central Idea",
     type: "folder",
     color: "#60a5fa",
