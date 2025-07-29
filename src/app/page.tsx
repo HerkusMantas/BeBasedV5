@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
-import type { ChangeEvent } from "react";
+import { useState, useRef, useCallback, useMemo, type ChangeEvent } from "react";
 import {
   BrainCircuit,
   Plus,
@@ -76,11 +75,6 @@ export default function MindMapEditor() {
   const [nodes, setNodes] = useState<MindMapNode[]>(initialNodes);
   const [links, setLinks] = useState<MindMapLink[]>(initialLinks);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [draggingNode, setDraggingNode] = useState<{
-    id: string;
-    offsetX: number;
-    offsetY: number;
-  } | null>(null);
   const [linkingState, setLinkingState] = useState<{ sourceId: string } | null>(
     null
   );
@@ -90,47 +84,6 @@ export default function MindMapEditor() {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
-
-  const handleNodeMouseDown = (
-    e: React.MouseEvent<SVGGElement>,
-    nodeId: string
-  ) => {
-    e.stopPropagation();
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node || !svgRef.current) return;
-    
-    const CTM = svgRef.current.getScreenCTM();
-    if (!CTM) return;
-
-    const mouseX = (e.clientX - CTM.e) / CTM.a;
-    const mouseY = (e.clientY - CTM.f) / CTM.d;
-
-    setDraggingNode({ id: nodeId, offsetX: mouseX - node.x, offsetY: mouseY - node.y });
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!draggingNode || !svgRef.current) return;
-    e.preventDefault();
-    
-    const CTM = svgRef.current.getScreenCTM();
-    if (!CTM) return;
-    
-    const mouseX = (e.clientX - CTM.e) / CTM.a;
-    const mouseY = (e.clientY - CTM.f) / CTM.d;
-
-    const newX = mouseX - draggingNode.offsetX;
-    const newY = mouseY - draggingNode.offsetY;
-
-    setNodes((prevNodes) =>
-      prevNodes.map((n) =>
-        n.id === draggingNode.id ? { ...n, x: newX, y: newY } : n
-      )
-    );
-  };
-
-  const handleCanvasMouseUp = () => {
-    setDraggingNode(null);
-  };
 
   const handleNodeClick = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
@@ -352,10 +305,7 @@ export default function MindMapEditor() {
         <div className="flex-1 relative bg-grid-slate-100 dark:bg-grid-slate-800/[0.6]">
           <svg
             ref={svgRef}
-            className="w-full h-full cursor-grab"
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseUp}
+            className="w-full h-full cursor-default"
             onClick={() => { setSelectedNodeId(null); setLinkingState(null); }}
           >
             <defs>
@@ -389,7 +339,6 @@ export default function MindMapEditor() {
               <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
-                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
                 onClick={(e) => handleNodeClick(e, node.id)}
                 onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
                 className="cursor-pointer group"
