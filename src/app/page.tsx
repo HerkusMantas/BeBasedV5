@@ -110,8 +110,8 @@ const initialLinks: MindMapLink[] = [];
 const defaultGlobalSettings = {
     canvasColor: "#0D0D0D",
     nodeTextColor: "#FFFFFF",
-    iconOffsetX: 0,
-    iconOffsetY: 0,
+    iconOffsetX: -8,
+    iconOffsetY: -8,
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
@@ -317,21 +317,23 @@ export default function MindMapEditor() {
     let reorderedVisibleNodes: MindMapNode[] = [];
     const hiddenNodeIds = new Set<string>();
   
-    nodes.forEach(node => {
-        if (node.isCollapsed) {
-            const descendants = getDescendantIds(node.id);
-            descendants.forEach(id => hiddenNodeIds.add(id));
-        }
-    });
-
-    const currentVisibleNodes = nodes.map(n => {
+    const updatedNodes = nodes.map(n => {
         if (n.type === 'canvas') {
             const lines = wrapText(n.text, 12).length || 1;
             const newHeight = Math.max(60, lines * 20 + 20); // Base height + padding
             return {...n, height: newHeight};
         }
         return n;
-    }).filter(n => !hiddenNodeIds.has(n.id));
+    });
+
+    updatedNodes.forEach(node => {
+        if (node.isCollapsed) {
+            const descendants = getDescendantIds(node.id);
+            descendants.forEach(id => hiddenNodeIds.add(id));
+        }
+    });
+
+    const currentVisibleNodes = updatedNodes.filter(n => !hiddenNodeIds.has(n.id));
 
     const visibleNodeIds = new Set(currentVisibleNodes.map(n => n.id));
     const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
@@ -913,8 +915,3 @@ export default function MindMapEditor() {
     </div>
   );
 }
-
-    
-
-    
-
