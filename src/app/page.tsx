@@ -131,6 +131,11 @@ const initialLinks: MindMapLink[] = [];
 const defaultGlobalSettings = {
     canvasColor: "#0D0D0D",
     nodeTextColor: "#FFFFFF",
+    plusIconOffsetX: 8,
+    plusIconOffsetY: 0,
+    folderIconOffsetX: 0,
+    folderIconOffsetY: 0,
+    folderIconColor: "#FFFFFF",
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
@@ -253,20 +258,28 @@ export default function MindMapEditor() {
   useEffect(() => {
     setNodes(prevNodes => {
         return prevNodes.map(n => {
+            const textRef = textRefs.current[n.id];
             if (n.type === 'canvas') {
                 const lines = wrapText(n.text, 12).length || 1;
                 const newHeight = Math.max(60, lines * 20 + 20); // Base height + padding
                 return {...n, height: newHeight};
             }
-            if (n.type === 'folder' && textRefs.current[n.id]) {
-                 const textWidth = textRefs.current[n.id]?.getComputedTextLength() || 0;
-                 const newWidth = textWidth + 30 + 20; // Icon width + padding
+            if (n.type === 'folder' && textRef) {
+                 const textWidth = textRef.getComputedTextLength() || 0;
+                 const FOLDER_ICON_WIDTH = 20;
+                 const FOLDER_ICON_MARGIN_RIGHT = 8;
+                 const PLUS_ICON_WIDTH = 16;
+                 const PLUS_ICON_MARGIN_LEFT = 8;
+                 const PADDING = 10;
+                 
+                 const newWidth = FOLDER_ICON_WIDTH + FOLDER_ICON_MARGIN_RIGHT + textWidth + PLUS_ICON_MARGIN_LEFT + PLUS_ICON_WIDTH + PADDING;
+
                  return { ...n, width: newWidth };
             }
             return n;
         });
     });
-  }, [nodes.map(n => n.text).join(',')]); // Rerun when any node text changes
+  }, [nodes.map(n => n.text).join(','), globalSettings]); // Rerun when any node text changes or settings change
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -698,6 +711,13 @@ export default function MindMapEditor() {
             {visibleNodes.map((node) => {
               const textLines = node.type === 'canvas' ? wrapText(node.text, 12) : [node.text];
               const textWidth = textRefs.current[node.id]?.getComputedTextLength() || 0;
+              const folderIconX = (globalSettings.folderIconOffsetX || 0);
+              const folderIconY = (globalSettings.folderIconOffsetY || 0);
+              const folderIconWidth = 20;
+              const textX = folderIconX + folderIconWidth + 8;
+              const plusIconX = textX + textWidth + (globalSettings.plusIconOffsetX || 0);
+              const plusIconY = (globalSettings.plusIconOffsetY || 0);
+
               return (
               <g
                 key={node.id}
@@ -733,10 +753,12 @@ export default function MindMapEditor() {
 
                 {node.type === 'folder' ? (
                    <g transform={`translate(0, ${node.height / 2})`}>
-                      <Folder className="w-5 h-5" style={{ transform: `translateY(-50%)`, color: node.textColor }} />
+                      <g transform={`translate(${folderIconX}, ${folderIconY})`}>
+                         <Folder className="w-5 h-5" style={{ transform: `translateY(-50%)`, color: globalSettings.folderIconColor }} />
+                      </g>
                       <text
                         ref={(el) => (textRefs.current[node.id] = el)}
-                        x={28}
+                        x={textX}
                         y={0}
                         textAnchor="start"
                         dominantBaseline="central"
@@ -747,7 +769,7 @@ export default function MindMapEditor() {
                       </text>
                       {hasChildren(node.id) && (
                         <g
-                           transform={`translate(${28 + textWidth + 8}, 0)`}
+                           transform={`translate(${plusIconX}, ${plusIconY})`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
@@ -861,36 +883,66 @@ export default function MindMapEditor() {
                         </CardContent>
                         </Card>
                     ) : (
-                       <Card className="min-w-80 w-80">
+                       <Card className="min-w-96 w-96">
                             <CardHeader>
                                 <CardTitle>Global Settings</CardTitle>
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                 <div className="grid grid-cols-[auto_min-content] gap-x-4 gap-y-2 items-center">
+                                 <div className="grid grid-cols-[auto_1fr_min-content] gap-x-4 gap-y-2 items-center">
                                     <Label>Mind Map Background</Label>
+                                    <div/>
                                     <Input type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
                                     <Label>Default Node Text</Label>
+                                    <div/>
                                     <Input type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
-                                    <div className="col-span-2"><Separator className="my-2"/></div>
+                                    <div className="col-span-3"><Separator className="my-2"/></div>
+                                    <Label className="text-sm font-medium col-span-3">Folder Icon Settings</Label>
+                                    
+                                    <Label>Folder Icon Color</Label>
+                                    <div/>
+                                    <Input type="color" value={globalSettings.folderIconColor} onChange={(e) => handleUpdateGlobalSettings({folderIconColor: e.target.value})} className="p-0 h-6 w-6" />
 
-                                    <Label className="text-sm font-medium col-span-2">App Theme</Label>
+                                    <Label>Folder Icon Offset X</Label>
+                                    <Input type="number" value={globalSettings.folderIconOffsetX} onChange={(e) => handleUpdateGlobalSettings({folderIconOffsetX: parseInt(e.target.value, 10) || 0})} className="h-8" />
+                                    <div/>
+                                    
+                                    <Label>Folder Icon Offset Y</Label>
+                                    <Input type="number" value={globalSettings.folderIconOffsetY} onChange={(e) => handleUpdateGlobalSettings({folderIconOffsetY: parseInt(e.target.value, 10) || 0})} className="h-8" />
+                                    <div/>
+                                    
+                                    <Label>+/- Icon Offset X</Label>
+                                    <Input type="number" value={globalSettings.plusIconOffsetX} onChange={(e) => handleUpdateGlobalSettings({plusIconOffsetX: parseInt(e.target.value, 10) || 0})} className="h-8" />
+                                    <div/>
+
+                                    <Label>+/- Icon Offset Y</Label>
+                                    <Input type="number" value={globalSettings.plusIconOffsetY} onChange={(e) => handleUpdateGlobalSettings({plusIconOffsetY: parseInt(e.target.value, 10) || 0})} className="h-8" />
+                                    <div/>
+
+                                    <div className="col-span-3"><Separator className="my-2"/></div>
+
+                                    <Label className="text-sm font-medium col-span-3">App Theme</Label>
                                     
                                     <Label>App Background</Label>
+                                    <div/>
                                     <Input type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                     
                                     <Label>App Text</Label>
+                                     <div/>
                                     <Input type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
                                     <Label>Primary</Label>
+                                     <div/>
                                     <Input type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
                                     <Label>Accent</Label>
+                                     <div/>
                                     <Input type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
                                     <Label>Borders & Separators</Label>
+                                     <div/>
                                     <Input type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
                             </CardContent>
@@ -940,3 +992,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
