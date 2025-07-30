@@ -20,6 +20,7 @@ import {
   PanelBottom,
   PanelBottomClose,
   Type,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,7 +105,7 @@ const defaultGlobalSettings = {
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        primaryHsl: "305 25% 27%",
+        primaryHsl: "305 45% 54%",
         accentHsl: "261 16% 72%",
         borderHsl: "305 25% 27%",
     }
@@ -283,6 +284,10 @@ export default function MindMapEditor() {
   
   const handleNodeDoubleClick = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
+    toggleNodeCollapse(nodeId);
+  };
+
+  const toggleNodeCollapse = (nodeId: string) => {
     setNodes(prevNodes => 
         prevNodes.map(n => 
             n.id === nodeId && n.type === 'folder' 
@@ -682,6 +687,20 @@ export default function MindMapEditor() {
                       >
                         {node.text}
                       </text>
+                      {hasChildren(node.id) && (
+                        <g 
+                          transform={`translate(${node.width - 20}, -8)`} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleNodeCollapse(node.id);
+                          }}
+                        >
+                          <rect width="16" height="16" rx="4" ry="4" className="fill-transparent" />
+                          {node.isCollapsed 
+                            ? <Plus className="w-4 h-4 text-white" /> 
+                            : <Minus className="w-4 h-4 text-white" />}
+                        </g>
+                      )}
                    </g>
                 ) : (
                   <text
@@ -694,15 +713,6 @@ export default function MindMapEditor() {
                   >
                     {node.text}
                   </text>
-                )}
-
-                 {hasChildren(node.id) && node.type === 'folder' && (
-                    <g transform={`translate(-16, ${node.height / 2 - 8})`}>
-                       {node.isCollapsed 
-                       ? <ChevronDown className="w-4 h-4" style={{ color: node.textColor }} /> 
-                       : <ChevronUp className="w-4 h-4" style={{ color: node.textColor }} />
-                       }
-                    </g>
                 )}
               </g>
             ))}
@@ -785,40 +795,40 @@ export default function MindMapEditor() {
                         </CardContent>
                         </Card>
                     ) : (
-                        <Card className="min-w-80">
+                       <Card className="w-80">
                             <CardHeader>
                                 <CardTitle>Global Settings</CardTitle>
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="canvas-color" className="flex-1">Mind Map Background</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="canvas-color">Mind Map Background</Label>
                                     <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
                                 </div>
-                                 <div className="flex items-center gap-4">
-                                    <Label htmlFor="node-text-color-global" className="flex-1">Default Node Text</Label>
+                                 <div className="flex items-center justify-between">
+                                    <Label htmlFor="node-text-color-global">Default Node Text</Label>
                                     <Input id="node-text-color-global" type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 </div>
                                 <Separator/>
                                  <Label className="text-sm font-medium pt-2 block">App Theme</Label>
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="background-color" className="flex-1">App Background</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="background-color">App Background</Label>
                                     <Input id="background-color" type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="foreground-color" className="flex-1">App Text</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="foreground-color">App Text</Label>
                                     <Input id="foreground-color" type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="primary-color" className="flex-1">Primary</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="primary-color">Primary</Label>
                                     <Input id="primary-color" type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="accent-color" className="flex-1">Accent</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="accent-color">Accent</Label>
                                     <Input id="accent-color" type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <Label htmlFor="border-color" className="flex-1">Borders & Separators</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="border-color">Borders & Separators</Label>
                                     <Input id="border-color" type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
                             </CardContent>
