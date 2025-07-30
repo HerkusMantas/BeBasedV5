@@ -105,8 +105,8 @@ const defaultGlobalSettings = {
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        primaryHsl: "305 45% 54%",
-        accentHsl: "261 16% 72%",
+        primaryHsl: "305 25% 27%",
+        accentHsl: "262 25% 72%",
         borderHsl: "305 25% 27%",
     }
 }
@@ -255,6 +255,11 @@ export default function MindMapEditor() {
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
   const handleNodeClick = (e: React.MouseEvent, nodeId: string) => {
+    if (e.detail === 2) {
+      // This is a double-click, so we let the onDoubleClick handler take care of it
+      return;
+    }
+
     e.stopPropagation();
     if (linkingState) {
       if (linkingState.sourceId !== nodeId) {
@@ -801,33 +806,29 @@ export default function MindMapEditor() {
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <div className="flex items-center justify-between">
+                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                     <Label htmlFor="canvas-color">Mind Map Background</Label>
                                     <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
-                                </div>
-                                 <div className="flex items-center justify-between">
+                                
                                     <Label htmlFor="node-text-color-global">Default Node Text</Label>
                                     <Input id="node-text-color-global" type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
-                                </div>
-                                <Separator/>
-                                 <Label className="text-sm font-medium pt-2 block">App Theme</Label>
-                                <div className="flex items-center justify-between">
+                                
+                                    <div className="col-span-2"><Separator className="my-2"/></div>
+
+                                    <Label className="text-sm font-medium col-span-2">App Theme</Label>
+                                    
                                     <Label htmlFor="background-color">App Background</Label>
                                     <Input id="background-color" type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
-                                </div>
-                                <div className="flex items-center justify-between">
+                                    
                                     <Label htmlFor="foreground-color">App Text</Label>
                                     <Input id="foreground-color" type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
-                                </div>
-                                <div className="flex items-center justify-between">
+                                   
                                     <Label htmlFor="primary-color">Primary</Label>
                                     <Input id="primary-color" type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
-                                </div>
-                                <div className="flex items-center justify-between">
+                                   
                                     <Label htmlFor="accent-color">Accent</Label>
                                     <Input id="accent-color" type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
-                                </div>
-                                <div className="flex items-center justify-between">
+                                   
                                     <Label htmlFor="border-color">Borders & Separators</Label>
                                     <Input id="border-color" type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
