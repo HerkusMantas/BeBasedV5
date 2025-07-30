@@ -102,6 +102,8 @@ const initialLinks: MindMapLink[] = [];
 const defaultGlobalSettings = {
     canvasColor: "#0D0D0D",
     nodeTextColor: "#FFFFFF",
+    iconOffsetX: 0,
+    iconOffsetY: 0,
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
@@ -693,17 +695,17 @@ export default function MindMapEditor() {
                         {node.text}
                       </text>
                       {hasChildren(node.id) && (
-                        <g 
-                          transform={`translate(${node.width - 12}, 0)`} 
+                        <g
+                          transform={`translate(${node.width - 12 + (globalSettings.iconOffsetX || 0)}, ${globalSettings.iconOffsetY || 0})`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
                           }}
                         >
                           <rect width="16" height="16" rx="4" ry="4" className="fill-transparent" style={{transform: "translate(-8px, -8px)"}} />
-                          {node.isCollapsed 
-                            ? <Plus className="w-4 h-4 text-white" style={{ transform: 'translate(4px, -4px)' }} /> 
-                            : <Minus className="w-4 h-4 text-white" style={{ transform: 'translate(4px, -4px)' }} />}
+                          {node.isCollapsed
+                            ? <Plus className="w-4 h-4 text-white" />
+                            : <Minus className="w-4 h-4 text-white" />}
                         </g>
                       )}
                    </g>
@@ -813,6 +815,14 @@ export default function MindMapEditor() {
                                     <Label>Default Node Text</Label>
                                     <Input type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
+                                    <div className="col-span-2"><Separator className="my-2"/></div>
+                                    
+                                    <Label className="text-sm font-medium">Piktogramos X ašis</Label>
+                                    <Input type="number" value={globalSettings.iconOffsetX} onChange={(e) => handleUpdateGlobalSettings({iconOffsetX: parseInt(e.target.value, 10) || 0})} className="h-8" />
+                                    
+                                    <Label className="text-sm font-medium">Piktogramos Y ašis</Label>
+                                    <Input type="number" value={globalSettings.iconOffsetY} onChange={(e) => handleUpdateGlobalSettings({iconOffsetY: parseInt(e.target.value, 10) || 0})} className="h-8" />
+
                                     <div className="col-span-2"><Separator className="my-2"/></div>
 
                                     <Label className="text-sm font-medium col-span-2">App Theme</Label>
