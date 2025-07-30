@@ -102,10 +102,10 @@ const defaultGlobalSettings = {
     canvasColor: "#292929",
     nodeTextColor: "#FFFFFF",
     theme: {
-        backgroundHsl: "222.2 84% 4.9%",
+        backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        accentHsl: "262.1 83.3% 57.8%",
-        borderHsl: "217.2 32.6% 17.5%",
+        accentHsl: "260 21% 72%",
+        borderHsl: "305 25% 27%",
     }
 }
 
@@ -243,6 +243,7 @@ export default function MindMapEditor() {
   };
   
   const getHexFromHsl = (hslString: string) => {
+      if (!hslString) return '#000000';
       const [h, s, l] = hslString.split(' ').map(v => parseFloat(v.replace('%', '')));
       return hslToHex(h, s, l);
   }
