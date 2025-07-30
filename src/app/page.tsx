@@ -51,7 +51,7 @@ const initialNodes: MindMapNode[] = [
     color: "#60a5fa",
     width: 150,
     height: 30,
-    textColor: "#111827",
+    textColor: "#FFFFFF",
   },
 ];
 
@@ -73,8 +73,8 @@ export default function MindMapEditor() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
   const [globalSettings, setGlobalSettings] = useState({
-    backgroundColor: "#ffffff",
-    nodeTextColor: "#111827",
+    backgroundColor: "#292929",
+    nodeTextColor: "#FFFFFF",
   });
 
   const db = getFirestore(storage.app);
@@ -102,7 +102,7 @@ export default function MindMapEditor() {
                 const data = docSnap.data();
                 setNodes(data.nodes || initialNodes);
                 setLinks(data.links || initialLinks);
-                setGlobalSettings(data.globalSettings || { backgroundColor: "#ffffff", nodeTextColor: "#111827" });
+                setGlobalSettings(data.globalSettings || { backgroundColor: "#292929", nodeTextColor: "#FFFFFF" });
             } else {
                 setNodes(initialNodes);
                 setLinks(initialLinks);
@@ -528,11 +528,7 @@ export default function MindMapEditor() {
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" className="fill-muted-foreground/60" />
               </marker>
-              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="1" cy="1" r="1" className="fill-muted-foreground/30"></circle>
-              </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
 
             {visibleLinks.map((link) => (
               <path
