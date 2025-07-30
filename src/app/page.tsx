@@ -47,7 +47,7 @@ const initialNodes: MindMapNode[] = [
     type: "folder",
     color: "#60a5fa",
     width: 150,
-    height: 60,
+    height: 30,
   },
 ];
 
@@ -121,7 +121,7 @@ export default function MindMapEditor() {
 
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark";
+    const savedTheme = "dark";
     setTheme(savedTheme);
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -183,44 +183,35 @@ export default function MindMapEditor() {
   };
   
   const { visibleNodes, visibleLinks } = useMemo(() => {
+    let reorderedVisibleNodes: MindMapNode[] = [];
     const hiddenNodeIds = new Set<string>();
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
   
-    function hideChildren(nodeId: string) {
-      if (!nodeMap.has(nodeId)) return;
-       const directChildren = links.filter(l => l.sourceId === nodeId).map(l => l.targetId);
-        directChildren.forEach(childId => {
-            hiddenNodeIds.add(childId);
-            const allDescendants = getDescendantIds(childId);
-            allDescendants.forEach(id => hiddenNodeIds.add(id));
-        });
-    }
-  
     nodes.forEach(node => {
-      if (node.isCollapsed) {
-        hideChildren(node.id);
-      }
+        if (node.isCollapsed) {
+            const descendants = getDescendantIds(node.id);
+            descendants.forEach(id => hiddenNodeIds.add(id));
+        }
     });
 
     const currentVisibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
     const visibleNodeIds = new Set(currentVisibleNodes.map(n => n.id));
     const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
 
-    const reorderedVisibleNodes: MindMapNode[] = [];
+    
     const rootNodes = nodes.filter(n => !links.some(l => l.targetId === n.id));
     
     let currentY = 20;
-    const nodeHeight = 60;
     const nodeGap = 20;
     const indent = 40;
 
-    function processNode(node: MindMapNode, x: number): number {
-        if (hiddenNodeIds.has(node.id)) return 0;
+    function processNode(node: MindMapNode, x: number): void {
+        if (hiddenNodeIds.has(node.id)) return;
         
-        const nodeWithNewPosition = { ...node, x, y: currentY };
+        const nodeHeight = node.type === 'folder' ? 30 : 60;
+        const nodeWithNewPosition = { ...node, x, y: currentY, height: nodeHeight };
         reorderedVisibleNodes.push(nodeWithNewPosition);
         
-        const startY = currentY;
         currentY += nodeHeight + nodeGap;
         
         if (!node.isCollapsed) {
@@ -233,7 +224,6 @@ export default function MindMapEditor() {
                 processNode(child, x + indent);
             });
         }
-        return currentY - startY;
     }
 
     rootNodes.forEach(rootNode => {
@@ -248,62 +238,45 @@ export default function MindMapEditor() {
     let newLink: MindMapLink | null = null;
   
     const parentNode = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) : null;
-    const nodeHeight = 60;
     const nodeWidth = 150;
     const nodeGap = 20;
-    const indent = 80;
+    const indent = 40;
   
     let newX: number;
     let newY: number;
+
+    const folderHeight = 30;
+    const canvasHeight = 60;
     
     if (type === 'folder') {
+      const lastNode = visibleNodes.length > 0 ? visibleNodes[visibleNodes.length - 1] : null;
+      newY = lastNode ? lastNode.y + lastNode.height + nodeGap : 20;
+
       if (parentNode && parentNode.type === 'folder') { // creating a child folder
         newX = parentNode.x + indent;
-        
-        const allDescendantIds = getDescendantIds(parentNode.id);
-        const visibleDescendants = nodes.filter(n => allDescendantIds.includes(n.id) && visibleNodes.some(vn => vn.id === n.id));
-        
-        let lastRelevantNode: MindMapNode = parentNode;
-        if (!parentNode.isCollapsed && visibleDescendants.length > 0) {
-          lastRelevantNode = visibleDescendants.reduce((latest, current) => latest.y > current.y ? latest : current, visibleDescendants[0]);
-        }
-        
-        const parentVisibleNode = visibleNodes.find(n => n.id === lastRelevantNode.id);
-        newY = (parentVisibleNode?.y ?? parentNode.y) + nodeHeight + nodeGap;
+      } else { // creating a root folder
+        newX = 20;
+      }
+      
+      newNode = {
+        id: `n-${Date.now()}`,
+        x: newX,
+        y: newY,
+        text: "New Folder",
+        type: "folder",
+        color: "#60a5fa",
+        width: nodeWidth,
+        height: folderHeight,
+      };
 
-        newNode = {
-          id: `n-${Date.now()}`,
-          x: newX,
-          y: newY,
-          text: "New Folder",
-          type: "folder",
-          color: "#60a5fa",
-          width: nodeWidth,
-          height: nodeHeight,
-        };
-  
-        newLink = {
+      if (parentNode) {
+         newLink = {
           id: `l-${Date.now()}`,
           sourceId: parentNode.id,
           targetId: newNode.id,
         };
-  
-      } else { // creating a root folder
-        newX = 20;
-        const lastVisibleNode = visibleNodes.length > 0 ? visibleNodes.reduce((latest, current) => latest.y > current.y ? latest : current, visibleNodes[0]) : null;
-        newY = lastVisibleNode ? lastVisibleNode.y + nodeHeight + nodeGap : 20;
-  
-        newNode = {
-          id: `n-${Date.now()}`,
-          x: newX,
-          y: newY,
-          text: "New Folder",
-          type: "folder",
-          color: "#60a5fa",
-          width: nodeWidth,
-          height: nodeHeight,
-        };
       }
+  
     } else { // canvas
       const canvasParentNode = parentNode || nodes.find(n => n.id === '1');
   
@@ -322,7 +295,7 @@ export default function MindMapEditor() {
         type: type,
         color: "#a7f3d0",
         width: nodeWidth,
-        height: nodeHeight,
+        height: canvasHeight,
       };
   
       if (canvasParentNode) {
@@ -577,11 +550,11 @@ export default function MindMapEditor() {
                 )}
 
                 {node.type === 'folder' ? (
-                   <g className="flex items-center">
-                      <Folder className="w-5 h-5 text-gray-800 dark:text-gray-200" style={{ transform: `translate(0, ${node.height / 2 - 10})` }} />
+                   <g transform={`translate(0, ${node.height / 2})`}>
+                      <Folder className="w-5 h-5 text-gray-800 dark:text-gray-200" style={{ transform: `translateY(-50%)` }} />
                       <text
-                        x={24}
-                        y={node.height / 2}
+                        x={28}
+                        y={0}
                         textAnchor="start"
                         dominantBaseline="central"
                         className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
@@ -602,7 +575,7 @@ export default function MindMapEditor() {
                 )}
 
                  {hasChildren(node.id) && node.type === 'folder' && (
-                    <g transform={`translate(${node.width / 2 - 8}, ${node.height - 20})`}>
+                    <g transform={`translate(-16, ${node.height / 2 - 8})`}>
                        {node.isCollapsed 
                        ? <ChevronDown className="w-4 h-4 text-gray-800 dark:text-gray-200" /> 
                        : <ChevronUp className="w-4 h-4 text-gray-800 dark:text-gray-200" />
@@ -715,3 +688,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
