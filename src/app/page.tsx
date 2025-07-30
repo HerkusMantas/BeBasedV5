@@ -783,12 +783,12 @@ export default function MindMapEditor() {
                     ) : (
                         <Card className="min-w-80">
                             <CardHeader>
-                                <CardTitle>Global Properties</CardTitle>
-                                <CardDescription>Manage the look of the entire mind map.</CardDescription>
+                                <CardTitle>Global Settings</CardTitle>
+                                <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="canvas-color">Canvas Color</Label>
+                                    <Label htmlFor="canvas-color">Mind Map Background</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                         id="canvas-color"
@@ -800,8 +800,23 @@ export default function MindMapEditor() {
                                         <Palette className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                 </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="node-text-color-global">Default Node Text</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="node-text-color-global"
+                                        type="color"
+                                        value={globalSettings.nodeTextColor}
+                                        onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})}
+                                        className="p-1 h-10"
+                                        />
+                                        <Type className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <Separator/>
+                                 <Label className="text-sm font-medium">App Theme</Label>
                                 <div className="space-y-2">
-                                    <Label htmlFor="background-color">Background</Label>
+                                    <Label htmlFor="background-color">App Background</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                         id="background-color"
@@ -814,26 +829,13 @@ export default function MindMapEditor() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="foreground-color">Foreground</Label>
+                                    <Label htmlFor="foreground-color">App Text</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                         id="foreground-color"
                                         type="color"
                                         value={getHexFromHsl(globalSettings.theme.foregroundHsl)}
                                         onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)}
-                                        className="p-1 h-10"
-                                        />
-                                        <Type className="h-5 w-5 text-muted-foreground" />
-                                    </div>
-                                </div>
-                                 <div className="space-y-2">
-                                    <Label htmlFor="node-text-color-global">Node Text Color</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                        id="node-text-color-global"
-                                        type="color"
-                                        value={globalSettings.nodeTextColor}
-                                        onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})}
                                         className="p-1 h-10"
                                         />
                                         <Type className="h-5 w-5 text-muted-foreground" />
@@ -853,7 +855,7 @@ export default function MindMapEditor() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="border-color">Border</Label>
+                                    <Label htmlFor="border-color">Borders & Separators</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
                                         id="border-color"
@@ -912,5 +914,7 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
 
     
