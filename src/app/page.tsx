@@ -105,7 +105,7 @@ const defaultGlobalSettings = {
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        primaryHsl: "305 25% 27%",
+        primaryHsl: "305 52% 48%",
         accentHsl: "262 25% 72%",
         borderHsl: "305 25% 27%",
     }
@@ -127,6 +127,7 @@ export default function MindMapEditor() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
   const [globalSettings, setGlobalSettings] = useState(defaultGlobalSettings);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const db = getFirestore(storage.app);
   const mindMapDocRef = doc(db, "mindmaps", "main");
@@ -139,7 +140,7 @@ export default function MindMapEditor() {
         console.error("Error saving mind map:", error);
         toast({
             variant: "destructive",
-            title: "Save Error",
+            title: "Error",
             description: "Could not save changes to the cloud.",
         });
       }
@@ -254,27 +255,42 @@ export default function MindMapEditor() {
 
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
+  const toggleNodeCollapse = (nodeId: string) => {
+    setNodes(prevNodes => 
+        prevNodes.map(n => 
+            n.id === nodeId && n.type === 'folder' 
+            ? { ...n, isCollapsed: !n.isCollapsed } 
+            : n
+        )
+    );
+  };
+  
   const handleNodeClick = (e: React.MouseEvent, nodeId: string) => {
-    if (e.detail === 2) {
-      // This is a double-click, so we let the onDoubleClick handler take care of it
-      return;
-    }
-
     e.stopPropagation();
-    if (linkingState) {
-      if (linkingState.sourceId !== nodeId) {
-        setLinks((prev) => [
-          ...prev,
-          {
-            id: `l-${Date.now()}`,
-            sourceId: linkingState.sourceId,
-            targetId: nodeId,
-          },
-        ]);
-      }
-      setLinkingState(null);
+
+    if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+        toggleNodeCollapse(nodeId);
     } else {
-      setSelectedNodeId(nodeId);
+        clickTimeoutRef.current = setTimeout(() => {
+            if (linkingState) {
+                if (linkingState.sourceId !== nodeId) {
+                    setLinks((prev) => [
+                        ...prev,
+                        {
+                            id: `l-${Date.now()}`,
+                            sourceId: linkingState.sourceId,
+                            targetId: nodeId,
+                        },
+                    ]);
+                }
+                setLinkingState(null);
+            } else {
+                setSelectedNodeId(nodeId);
+            }
+            clickTimeoutRef.current = null;
+        }, 250);
     }
   };
 
@@ -286,21 +302,6 @@ export default function MindMapEditor() {
     });
     return allDescendants;
   }, [links]);
-  
-  const handleNodeDoubleClick = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    toggleNodeCollapse(nodeId);
-  };
-
-  const toggleNodeCollapse = (nodeId: string) => {
-    setNodes(prevNodes => 
-        prevNodes.map(n => 
-            n.id === nodeId && n.type === 'folder' 
-            ? { ...n, isCollapsed: !n.isCollapsed } 
-            : n
-        )
-    );
-  };
   
   const { visibleNodes, visibleLinks } = useMemo(() => {
     let reorderedVisibleNodes: MindMapNode[] = [];
@@ -650,7 +651,6 @@ export default function MindMapEditor() {
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
                 onClick={(e) => handleNodeClick(e, node.id)}
-                onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
                 className="cursor-pointer group"
               >
                 {node.type === 'canvas' ? (
