@@ -131,8 +131,6 @@ const initialLinks: MindMapLink[] = [];
 const defaultGlobalSettings = {
     canvasColor: "#0D0D0D",
     nodeTextColor: "#FFFFFF",
-    iconOffsetX: -8,
-    iconOffsetY: -8,
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
@@ -159,6 +157,7 @@ export default function MindMapEditor() {
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
   const [globalSettings, setGlobalSettings] = useState(defaultGlobalSettings);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const textRefs = useRef<{[key: string]: SVGTextElement | null}>({});
 
   const db = getFirestore(storage.app);
   const mindMapDocRef = doc(db, "mindmaps", "main");
@@ -251,6 +250,24 @@ export default function MindMapEditor() {
     }
   }, []);
 
+  useEffect(() => {
+    setNodes(prevNodes => {
+        return prevNodes.map(n => {
+            if (n.type === 'canvas') {
+                const lines = wrapText(n.text, 12).length || 1;
+                const newHeight = Math.max(60, lines * 20 + 20); // Base height + padding
+                return {...n, height: newHeight};
+            }
+            if (n.type === 'folder' && textRefs.current[n.id]) {
+                 const textWidth = textRefs.current[n.id]?.getComputedTextLength() || 0;
+                 const newWidth = textWidth + 30 + 20; // Icon width + padding
+                 return { ...n, width: newWidth };
+            }
+            return n;
+        });
+    });
+  }, [nodes.map(n => n.text).join(',')]); // Rerun when any node text changes
+
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
@@ -338,14 +355,7 @@ export default function MindMapEditor() {
     let reorderedVisibleNodes: MindMapNode[] = [];
     const hiddenNodeIds = new Set<string>();
   
-    const updatedNodes = nodes.map(n => {
-        if (n.type === 'canvas') {
-            const lines = wrapText(n.text, 12).length || 1;
-            const newHeight = Math.max(60, lines * 20 + 20); // Base height + padding
-            return {...n, height: newHeight};
-        }
-        return n;
-    });
+    const updatedNodes = nodes;
 
     updatedNodes.forEach(node => {
         if (node.isCollapsed) {
@@ -687,6 +697,7 @@ export default function MindMapEditor() {
             ))}
             {visibleNodes.map((node) => {
               const textLines = node.type === 'canvas' ? wrapText(node.text, 12) : [node.text];
+              const textWidth = textRefs.current[node.id]?.getComputedTextLength() || 0;
               return (
               <g
                 key={node.id}
@@ -724,6 +735,7 @@ export default function MindMapEditor() {
                    <g transform={`translate(0, ${node.height / 2})`}>
                       <Folder className="w-5 h-5" style={{ transform: `translateY(-50%)`, color: node.textColor }} />
                       <text
+                        ref={(el) => (textRefs.current[node.id] = el)}
                         x={28}
                         y={0}
                         textAnchor="start"
@@ -735,7 +747,7 @@ export default function MindMapEditor() {
                       </text>
                       {hasChildren(node.id) && (
                         <g
-                           transform={`translate(${node.width + (globalSettings.iconOffsetX || 0)}, ${node.height/2 + (globalSettings.iconOffsetY || 0)})`}
+                           transform={`translate(${28 + textWidth + 8}, 0)`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
@@ -862,14 +874,6 @@ export default function MindMapEditor() {
                                     <Label>Default Node Text</Label>
                                     <Input type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
-                                    <div className="col-span-2"><Separator className="my-2"/></div>
-                                    
-                                    <Label className="text-sm font-medium">Piktogramos X ašis</Label>
-                                    <Input type="number" value={globalSettings.iconOffsetX} onChange={(e) => handleUpdateGlobalSettings({iconOffsetX: parseInt(e.target.value, 10) || 0})} className="h-8" />
-                                    
-                                    <Label className="text-sm font-medium">Piktogramos Y ašis</Label>
-                                    <Input type="number" value={globalSettings.iconOffsetY} onChange={(e) => handleUpdateGlobalSettings({iconOffsetY: parseInt(e.target.value, 10) || 0})} className="h-8" />
-
                                     <div className="col-span-2"><Separator className="my-2"/></div>
 
                                     <Label className="text-sm font-medium col-span-2">App Theme</Label>
