@@ -34,6 +34,9 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { MindMapNode, MindMapLink } from "@/lib/types";
 import { suggestConcepts } from "@/ai/flows/suggest-concepts";
+import { storage } from "@/lib/firebase";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+
 
 const initialNodes: MindMapNode[] = [
   {
@@ -52,8 +55,8 @@ const initialLinks: MindMapLink[] = [];
 
 export default function MindMapEditor() {
   const { toast } = useToast();
-  const [nodes, setNodes] = useState<MindMapNode[]>(initialNodes);
-  const [links, setLinks] = useState<MindMapLink[]>(initialLinks);
+  const [nodes, setNodes] = useState<MindMapNode[]>([]);
+  const [links, setLinks] = useState<MindMapLink[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [linkingState, setLinkingState] = useState<{ sourceId: string } | null>(
     null
@@ -63,6 +66,59 @@ export default function MindMapEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [theme, setTheme] = useState("dark");
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const db = getFirestore(storage.app);
+  const mindMapDocRef = doc(db, "mindmaps", "main");
+
+  const saveData = useCallback(async (nodesToSave: MindMapNode[], linksToSave: MindMapLink[]) => {
+      if (!isLoaded) return;
+      try {
+        await setDoc(mindMapDocRef, { nodes: nodesToSave, links: linksToSave });
+      } catch (error) {
+        console.error("Error saving mind map:", error);
+        toast({
+            variant: "destructive",
+            title: "Save Error",
+            description: "Could not save changes to the cloud.",
+        });
+      }
+  }, [mindMapDocRef, toast, isLoaded]);
+
+  useEffect(() => {
+    const loadData = async () => {
+        try {
+            const docSnap = await getDoc(mindMapDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setNodes(data.nodes || initialNodes);
+                setLinks(data.links || initialLinks);
+            } else {
+                setNodes(initialNodes);
+                setLinks(initialLinks);
+            }
+        } catch (error) {
+            console.error("Error loading mind map:", error);
+            setNodes(initialNodes);
+            setLinks(initialLinks);
+             toast({
+                variant: "destructive",
+                title: "Load Error",
+                description: "Could not load data from the cloud.",
+            });
+        } finally {
+            setIsLoaded(true);
+        }
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if(isLoaded) {
+        saveData(nodes, links);
+    }
+  }, [nodes, links, saveData, isLoaded]);
+
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "dark";
@@ -136,15 +192,8 @@ export default function MindMapEditor() {
       for (const link of childrenLinks) {
         const childId = link.targetId;
         hiddenNodeIds.add(childId);
-        // Recursively hide children of collapsed children
-        const childNode = nodeMap.get(childId);
-        if (childNode?.isCollapsed) {
-          hideChildren(childId);
-        } else {
-            // also hide grandchildren of a collapsed node even if they are not collapsed themselves
-            const grandChildrenIds = getDescendantIds(childId);
-            grandChildrenIds.forEach(id => hiddenNodeIds.add(id));
-        }
+        const allDescendants = getDescendantIds(childId);
+        allDescendants.forEach(id => hiddenNodeIds.add(id));
       }
     }
   
@@ -159,14 +208,14 @@ export default function MindMapEditor() {
     const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
 
     const reorderedVisibleNodes: MindMapNode[] = [];
-    const rootNodes = nodes.filter(n => !links.some(l => l.targetId === n.id && visibleNodeIds.has(l.sourceId)));
+    const rootNodes = nodes.filter(n => !links.some(l => l.targetId === n.id));
     
     let currentY = 20;
     const nodeHeight = 60;
     const nodeGap = 20;
     const indent = 40;
 
-    function processNode(node: MindMapNode, x: number, level: number): number {
+    function processNode(node: MindMapNode, x: number): number {
         if (hiddenNodeIds.has(node.id)) return 0;
         
         const nodeWithNewPosition = { ...node, x, y: currentY };
@@ -182,18 +231,18 @@ export default function MindMapEditor() {
                 .filter((n): n is MindMapNode => !!n);
             
             children.forEach(child => {
-                processNode(child, x + indent, level + 1);
+                processNode(child, x + indent);
             });
         }
         return currentY - startY;
     }
 
     rootNodes.forEach(rootNode => {
-        processNode(rootNode, 20, 0);
+        processNode(rootNode, 20);
     });
 
     return { visibleNodes: reorderedVisibleNodes, visibleLinks: finalVisibleLinks };
-}, [nodes, links, getDescendantIds]);
+  }, [nodes, links, getDescendantIds]);
 
   const handleAddNode = (type: 'folder' | 'canvas') => {
     let newNode: MindMapNode;
@@ -209,7 +258,7 @@ export default function MindMapEditor() {
     let newY: number;
     
     if (type === 'folder') {
-      if (parentNode && parentNode.type === 'folder') {
+      if (parentNode && parentNode.type === 'folder') { // creating a child folder
         newX = parentNode.x + indent;
         
         const allDescendantIds = getDescendantIds(parentNode.id);
@@ -221,7 +270,7 @@ export default function MindMapEditor() {
         }
         
         const parentVisibleNode = visibleNodes.find(n => n.id === lastRelevantNode.id);
-        newY = (parentVisibleNode?.y ?? lastRelevantNode.y) + nodeHeight + nodeGap;
+        newY = (parentVisibleNode?.y ?? parentNode.y) + nodeHeight + nodeGap;
 
         newNode = {
           id: `n-${Date.now()}`,
@@ -242,7 +291,7 @@ export default function MindMapEditor() {
   
       } else { // creating a root folder
         newX = 20;
-        const lastVisibleNode = visibleNodes.length > 0 ? visibleNodes[visibleNodes.length - 1] : null;
+        const lastVisibleNode = visibleNodes.length > 0 ? visibleNodes.reduce((latest, current) => latest.y > current.y ? latest : current, visibleNodes[0]) : null;
         newY = lastVisibleNode ? lastVisibleNode.y + nodeHeight + nodeGap : 20;
   
         newNode = {
@@ -286,12 +335,10 @@ export default function MindMapEditor() {
       }
     }
     
-    let intermediateNodes = [...nodes, newNode];
+    setNodes(prev => [...prev, newNode]);
     if (newLink) {
         setLinks(prev => [...prev, newLink!]);
     }
-  
-    setNodes(intermediateNodes);
     setSelectedNodeId(newNode.id);
   };
   
@@ -301,10 +348,13 @@ export default function MindMapEditor() {
 
   const handleDeleteNode = () => {
     if (!selectedNodeId) return;
-    setNodes(nodes.filter((n) => n.id !== selectedNodeId));
+    const descendantIds = getDescendantIds(selectedNodeId);
+    const idsToDelete = [selectedNodeId, ...descendantIds];
+
+    setNodes(nodes.filter((n) => !idsToDelete.includes(n.id)));
     setLinks(
       links.filter(
-        (l) => l.sourceId !== selectedNodeId && l.targetId !== selectedNodeId
+        (l) => !idsToDelete.includes(l.sourceId) && !idsToDelete.includes(l.targetId)
       )
     );
     setSelectedNodeId(null);
@@ -411,7 +461,6 @@ export default function MindMapEditor() {
 
     if (!sourceNode || !targetNode) return "";
     
-    // Do not draw lines between folders
     if (sourceNode.type === 'folder' && targetNode.type === 'folder') {
         return "";
     }
@@ -430,6 +479,14 @@ export default function MindMapEditor() {
   };
 
   const hasChildren = (nodeId: string) => links.some(link => link.sourceId === nodeId);
+
+  if (!isLoaded) {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body">
