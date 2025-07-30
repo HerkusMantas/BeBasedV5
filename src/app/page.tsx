@@ -186,6 +186,7 @@ export default function MindMapEditor() {
         const { backgroundHsl, foregroundHsl, primaryHsl, accentHsl, borderHsl } = globalSettings.theme;
 
         const setVar = (name: string, value: string) => {
+             if (!value) return;
              const [h, s, l] = value.split(' ').map(v => v.replace('%', ''));
              root.style.setProperty(name, `${h} ${s}% ${l}%`);
              if (name === '--background') {
@@ -723,7 +724,7 @@ export default function MindMapEditor() {
                 <span className="sr-only">Toggle Properties Panel</span>
              </Button>
             {isPropertiesPanelOpen && (
-                 <div className="p-4 flex flex-row gap-6 overflow-x-auto">
+                 <div className="p-4 flex flex-row gap-6 overflow-x-auto h-52">
                     {selectedNode ? (
                         <Card className="min-w-80">
                         <CardHeader>
@@ -784,41 +785,41 @@ export default function MindMapEditor() {
                         </CardContent>
                         </Card>
                     ) : (
-                        <Card className="w-full">
+                        <Card className="min-w-80">
                             <CardHeader>
                                 <CardTitle>Global Settings</CardTitle>
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="canvas-color">Mind Map Background</Label>
-                                    <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="canvas-color" className="flex-1">Mind Map Background</Label>
+                                    <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
                                 </div>
-                                 <div className="flex items-center justify-between">
-                                    <Label htmlFor="node-text-color-global">Default Node Text</Label>
-                                    <Input id="node-text-color-global" type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-8 w-8" />
+                                 <div className="flex items-center gap-4">
+                                    <Label htmlFor="node-text-color-global" className="flex-1">Default Node Text</Label>
+                                    <Input id="node-text-color-global" type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 </div>
                                 <Separator/>
                                  <Label className="text-sm font-medium pt-2 block">App Theme</Label>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="background-color">App Background</Label>
-                                    <Input id="background-color" type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="background-color" className="flex-1">App Background</Label>
+                                    <Input id="background-color" type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="foreground-color">App Text</Label>
-                                    <Input id="foreground-color" type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="foreground-color" className="flex-1">App Text</Label>
+                                    <Input id="foreground-color" type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="primary-color">Primary</Label>
-                                    <Input id="primary-color" type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="primary-color" className="flex-1">Primary</Label>
+                                    <Input id="primary-color" type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="accent-color">Accent</Label>
-                                    <Input id="accent-color" type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="accent-color" className="flex-1">Accent</Label>
+                                    <Input id="accent-color" type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="border-color">Borders & Separators</Label>
-                                    <Input id="border-color" type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-8 w-8" />
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="border-color" className="flex-1">Borders & Separators</Label>
+                                    <Input id="border-color" type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
                             </CardContent>
                         </Card>
