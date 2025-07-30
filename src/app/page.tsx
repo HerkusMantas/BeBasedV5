@@ -105,9 +105,9 @@ const defaultGlobalSettings = {
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        primaryHsl: "305 52% 48%",
-        accentHsl: "276 34% 78%",
-        borderHsl: "305 20% 32%",
+        primaryHsl: "308 30% 27%",
+        accentHsl: "240 10% 80%",
+        borderHsl: "308 30% 27%",
     }
 }
 
@@ -361,7 +361,7 @@ export default function MindMapEditor() {
     const nodeWidth = 150;
     const nodeGap = 20;
     const indent = 40;
-  
+
     let newX: number;
     let newY: number;
 
@@ -702,8 +702,8 @@ export default function MindMapEditor() {
                         >
                           <rect width="16" height="16" rx="4" ry="4" className="fill-transparent" style={{transform: "translate(-8px, -8px)"}} />
                           {node.isCollapsed 
-                            ? <Plus className="w-4 h-4 text-white" /> 
-                            : <Minus className="w-4 h-4 text-white" />}
+                            ? <Plus className="w-4 h-4 text-white" style={{ transform: 'translate(4px, -4px)' }} /> 
+                            : <Minus className="w-4 h-4 text-white" style={{ transform: 'translate(4px, -4px)' }} />}
                         </g>
                       )}
                    </g>
@@ -739,7 +739,7 @@ export default function MindMapEditor() {
                 <span className="sr-only">Toggle Properties Panel</span>
              </Button>
             {isPropertiesPanelOpen && (
-                 <div className="p-4 flex flex-row gap-6 overflow-x-auto h-52">
+                 <div className="p-4 flex flex-row gap-6 overflow-x-auto h-auto">
                     {selectedNode ? (
                         <Card className="min-w-80">
                         <CardHeader>
@@ -800,37 +800,37 @@ export default function MindMapEditor() {
                         </CardContent>
                         </Card>
                     ) : (
-                       <Card className="w-80">
+                       <Card className="min-w-80 w-80">
                             <CardHeader>
                                 <CardTitle>Global Settings</CardTitle>
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
                                  <div className="grid grid-cols-[auto_min-content] gap-x-4 gap-y-2 items-center">
-                                    <Label htmlFor="canvas-color">Mind Map Background</Label>
-                                    <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
+                                    <Label>Mind Map Background</Label>
+                                    <Input type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
-                                    <Label htmlFor="node-text-color-global">Default Node Text</Label>
-                                    <Input id="node-text-color-global" type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
+                                    <Label>Default Node Text</Label>
+                                    <Input type="color" value={globalSettings.nodeTextColor} onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
                                     <div className="col-span-2"><Separator className="my-2"/></div>
 
                                     <Label className="text-sm font-medium col-span-2">App Theme</Label>
                                     
-                                    <Label htmlFor="background-color">App Background</Label>
-                                    <Input id="background-color" type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
+                                    <Label>App Background</Label>
+                                    <Input type="color" value={getHexFromHsl(globalSettings.theme.backgroundHsl)} onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                     
-                                    <Label htmlFor="foreground-color">App Text</Label>
-                                    <Input id="foreground-color" type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
+                                    <Label>App Text</Label>
+                                    <Input type="color" value={getHexFromHsl(globalSettings.theme.foregroundHsl)} onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
-                                    <Label htmlFor="primary-color">Primary</Label>
-                                    <Input id="primary-color" type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
+                                    <Label>Primary</Label>
+                                    <Input type="color" value={getHexFromHsl(globalSettings.theme.primaryHsl)} onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
-                                    <Label htmlFor="accent-color">Accent</Label>
-                                    <Input id="accent-color" type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
+                                    <Label>Accent</Label>
+                                    <Input type="color" value={getHexFromHsl(globalSettings.theme.accentHsl)} onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)} className="p-0 h-6 w-6" />
                                    
-                                    <Label htmlFor="border-color">Borders & Separators</Label>
-                                    <Input id="border-color" type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
+                                    <Label>Borders & Separators</Label>
+                                    <Input type="color" value={getHexFromHsl(globalSettings.theme.borderHsl)} onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)} className="p-0 h-6 w-6" />
                                 </div>
                             </CardContent>
                         </Card>
@@ -879,5 +879,7 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
 
     
