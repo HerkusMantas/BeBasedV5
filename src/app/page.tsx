@@ -188,13 +188,12 @@ export default function MindMapEditor() {
   
     function hideChildren(nodeId: string) {
       if (!nodeMap.has(nodeId)) return;
-      const childrenLinks = links.filter(l => l.sourceId === nodeId);
-      for (const link of childrenLinks) {
-        const childId = link.targetId;
-        hiddenNodeIds.add(childId);
-        const allDescendants = getDescendantIds(childId);
-        allDescendants.forEach(id => hiddenNodeIds.add(id));
-      }
+       const directChildren = links.filter(l => l.sourceId === nodeId).map(l => l.targetId);
+        directChildren.forEach(childId => {
+            hiddenNodeIds.add(childId);
+            const allDescendants = getDescendantIds(childId);
+            allDescendants.forEach(id => hiddenNodeIds.add(id));
+        });
     }
   
     nodes.forEach(node => {
@@ -252,7 +251,7 @@ export default function MindMapEditor() {
     const nodeHeight = 60;
     const nodeWidth = 150;
     const nodeGap = 20;
-    const indent = 40;
+    const indent = 80;
   
     let newX: number;
     let newY: number;
@@ -551,29 +550,57 @@ export default function MindMapEditor() {
                 onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
                 className="cursor-pointer group"
               >
-                <rect
-                  width={node.width}
-                  height={node.height}
-                  rx="10"
-                  ry="10"
-                  fill={node.color}
-                  className={cn(
-                    "transition-all duration-200",
-                    selectedNodeId === node.id || (linkingState && linkingState.sourceId === node.id)
-                      ? "stroke-primary stroke-[3px]"
-                      : "stroke-black/30 dark:stroke-white/30 stroke-2",
-                    "group-hover:stroke-primary group-hover:stroke-2"
-                  )}
-                />
-                <text
-                  x={node.width / 2}
-                  y={node.height / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
-                >
-                  {node.text}
-                </text>
+                {node.type === 'canvas' ? (
+                  <rect
+                    width={node.width}
+                    height={node.height}
+                    rx="10"
+                    ry="10"
+                    fill={node.color}
+                    className={cn(
+                      "transition-all duration-200",
+                      selectedNodeId === node.id || (linkingState && linkingState.sourceId === node.id)
+                        ? "stroke-primary stroke-[3px]"
+                        : "stroke-black/30 dark:stroke-white/30 stroke-2",
+                      "group-hover:stroke-primary group-hover:stroke-2"
+                    )}
+                  />
+                ) : (
+                   <rect
+                      width={node.width}
+                      height={node.height}
+                      fill="transparent"
+                      className={cn(
+                        (selectedNodeId === node.id || (linkingState && linkingState.sourceId === node.id)) && "stroke-primary/50 stroke-2 rounded-md"
+                      )}
+                    />
+                )}
+
+                {node.type === 'folder' ? (
+                   <g className="flex items-center">
+                      <Folder className="w-5 h-5 text-gray-800 dark:text-gray-200" style={{ transform: `translate(0, ${node.height / 2 - 10})` }} />
+                      <text
+                        x={24}
+                        y={node.height / 2}
+                        textAnchor="start"
+                        dominantBaseline="central"
+                        className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
+                      >
+                        {node.text}
+                      </text>
+                   </g>
+                ) : (
+                  <text
+                    x={node.width / 2}
+                    y={node.height / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
+                  >
+                    {node.text}
+                  </text>
+                )}
+
                  {hasChildren(node.id) && node.type === 'folder' && (
                     <g transform={`translate(${node.width / 2 - 8}, ${node.height - 20})`}>
                        {node.isCollapsed 
@@ -609,7 +636,7 @@ export default function MindMapEditor() {
                     onChange={(e) => handleUpdateNode(selectedNodeId!, {text: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
+                {selectedNode.type === 'canvas' && <div className="space-y-2">
                   <Label htmlFor="node-color">Color</Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -621,7 +648,7 @@ export default function MindMapEditor() {
                     />
                     <Palette className="h-5 w-5 text-muted-foreground" />
                   </div>
-                </div>
+                </div>}
                 <Separator />
                 <div className="flex gap-2">
                     <Button onClick={handleStartLinking} size="sm" className="w-full">
@@ -688,5 +715,3 @@ export default function MindMapEditor() {
     </div>
   );
 }
-
-    
