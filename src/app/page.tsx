@@ -82,6 +82,14 @@ const hexToHsl = (hex: string): { h: number, s: number, l: number } => {
     return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
+const wrapText = (text: string, charsPerLine: number) => {
+    const lines: string[] = [];
+    if (!text) return lines;
+    for (let i = 0; i < text.length; i += charsPerLine) {
+        lines.push(text.substring(i, i + charsPerLine));
+    }
+    return lines;
+};
 
 const initialNodes: MindMapNode[] = [
   {
@@ -316,12 +324,19 @@ export default function MindMapEditor() {
         }
     });
 
-    const currentVisibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
+    const currentVisibleNodes = nodes.map(n => {
+        if (n.type === 'canvas') {
+            const lines = wrapText(n.text, 12).length || 1;
+            const newHeight = Math.max(60, lines * 20 + 20); // Base height + padding
+            return {...n, height: newHeight};
+        }
+        return n;
+    }).filter(n => !hiddenNodeIds.has(n.id));
+
     const visibleNodeIds = new Set(currentVisibleNodes.map(n => n.id));
     const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
-
     
-    const rootNodes = nodes.filter(n => !links.some(l => l.targetId === n.id));
+    const rootNodes = currentVisibleNodes.filter(n => !links.some(l => l.targetId === n.id));
     
     let currentY = 20;
     const nodeGap = 20;
@@ -330,16 +345,15 @@ export default function MindMapEditor() {
     function processNode(node: MindMapNode, x: number): void {
         if (hiddenNodeIds.has(node.id)) return;
         
-        const nodeHeight = node.type === 'folder' ? 30 : 60;
-        const nodeWithNewPosition = { ...node, x, y: currentY, height: nodeHeight };
+        const nodeWithNewPosition = { ...node, x, y: currentY };
         reorderedVisibleNodes.push(nodeWithNewPosition);
         
-        currentY += nodeHeight + nodeGap;
+        currentY += node.height + nodeGap;
         
         if (!node.isCollapsed) {
             const children = links
                 .filter(l => l.sourceId === node.id)
-                .map(l => nodes.find(n => n.id === l.targetId))
+                .map(l => currentVisibleNodes.find(n => n.id === l.targetId))
                 .filter((n): n is MindMapNode => !!n);
             
             children.forEach(child => {
@@ -648,7 +662,9 @@ export default function MindMapEditor() {
                 markerEnd={nodes.find(n => n.id === link.sourceId)?.type === 'folder' && nodes.find(n => n.id === link.targetId)?.type === 'folder' ? "" : "url(#arrowhead)"}
               />
             ))}
-            {visibleNodes.map((node) => (
+            {visibleNodes.map((node) => {
+              const textLines = wrapText(node.text, 12);
+              return (
               <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
@@ -696,7 +712,7 @@ export default function MindMapEditor() {
                       </text>
                       {hasChildren(node.id) && (
                         <g
-                          transform={`translate(${node.width - 12 + (globalSettings.iconOffsetX || 0)}, ${globalSettings.iconOffsetY || 0})`}
+                           transform={`translate(${node.width - 12 + (globalSettings.iconOffsetX || 0)}, ${globalSettings.iconOffsetY || 0})`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
@@ -718,11 +734,19 @@ export default function MindMapEditor() {
                     className="font-semibold pointer-events-none select-none"
                     style={{ fill: node.textColor }}
                   >
-                    {node.text}
+                   {textLines.map((line, index) => (
+                      <tspan
+                          key={index}
+                          x={node.width / 2}
+                          dy={index === 0 ? (textLines.length > 1 ? `-${(textLines.length - 1) * 0.6}em` : 0) : "1.2em"}
+                      >
+                          {line}
+                      </tspan>
+                  ))}
                   </text>
                 )}
               </g>
-            ))}
+            )})}
              {linkingState && nodes.find(n => n.id === linkingState.sourceId) && (
                 <path d="" className="stroke-primary stroke-2 stroke-dashed" fill="none" pointerEvents="none" />
              )}
@@ -893,3 +917,4 @@ export default function MindMapEditor() {
     
 
     
+
