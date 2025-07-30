@@ -62,10 +62,10 @@ export default function MindMapEditor() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState("dark");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
+    const savedTheme = localStorage.getItem("theme") || "dark";
     setTheme(savedTheme);
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -106,14 +106,14 @@ export default function MindMapEditor() {
     }
   };
 
-  const getDescendantIds = useCallback((nodeId: string, allLinks: MindMapLink[]): string[] => {
-    const directChildren = allLinks.filter(l => l.sourceId === nodeId).map(l => l.targetId);
+  const getDescendantIds = useCallback((nodeId: string): string[] => {
+    const directChildren = links.filter(l => l.sourceId === nodeId).map(l => l.targetId);
     let allDescendants = [...directChildren];
     directChildren.forEach(childId => {
-        allDescendants = [...allDescendants, ...getDescendantIds(childId, allLinks)];
+        allDescendants = [...allDescendants, ...getDescendantIds(childId)];
     });
     return allDescendants;
-  }, []);
+  }, [links]);
   
   const handleNodeDoubleClick = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
@@ -129,178 +129,169 @@ export default function MindMapEditor() {
   const { visibleNodes, visibleLinks } = useMemo(() => {
     const hiddenNodeIds = new Set<string>();
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
+  
     function hideChildren(nodeId: string) {
-        if (!nodeMap.has(nodeId)) return;
-        const childrenLinks = links.filter(l => l.sourceId === nodeId);
-        for (const link of childrenLinks) {
-            const childId = link.targetId;
-            hiddenNodeIds.add(childId);
-            const childNode = nodeMap.get(childId);
-            if (childNode && childNode.isCollapsed) {
-                // If a child is collapsed, we need to hide its children too
-                hideChildren(childId);
-            }
+      if (!nodeMap.has(nodeId)) return;
+      const childrenLinks = links.filter(l => l.sourceId === nodeId);
+      for (const link of childrenLinks) {
+        const childId = link.targetId;
+        hiddenNodeIds.add(childId);
+        // Recursively hide children of collapsed children
+        const childNode = nodeMap.get(childId);
+        if (childNode?.isCollapsed) {
+          hideChildren(childId);
+        } else {
+            // also hide grandchildren of a collapsed node even if they are not collapsed themselves
+            const grandChildrenIds = getDescendantIds(childId);
+            grandChildrenIds.forEach(id => hiddenNodeIds.add(id));
         }
+      }
     }
-
+  
     nodes.forEach(node => {
-        if (node.isCollapsed) {
-            hideChildren(node.id);
-        }
+      if (node.isCollapsed) {
+        hideChildren(node.id);
+      }
     });
 
     const currentVisibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
-    const visibleNodeMap = new Map(currentVisibleNodes.map(n => [n.id, {...n}]));
+    const visibleNodeIds = new Set(currentVisibleNodes.map(n => n.id));
+    const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
+
     const reorderedVisibleNodes: MindMapNode[] = [];
-
-    const rootNodeIds = new Set(currentVisibleNodes.map(n => n.id));
-    links.forEach(link => {
-        if (hiddenNodeIds.has(link.sourceId) || hiddenNodeIds.has(link.targetId)) return;
-        if(visibleNodeMap.has(link.sourceId)) {
-            rootNodeIds.delete(link.targetId);
-        }
-    });
-
-    const rootNodes = Array.from(rootNodeIds)
-        .map(id => visibleNodeMap.get(id)!)
-        .filter(Boolean)
-        .sort((a,b) => a.y - b.y);
-
+    const rootNodes = nodes.filter(n => !links.some(l => l.targetId === n.id && visibleNodeIds.has(l.sourceId)));
+    
     let currentY = 20;
     const nodeHeight = 60;
     const nodeGap = 20;
-    const indent = 40; 
+    const indent = 40;
 
-    function processNode(nodeId: string, x: number, level: number) {
-        const node = visibleNodeMap.get(nodeId);
-        if (!node) return;
-
-        node.x = x;
-        node.y = currentY;
-        reorderedVisibleNodes.push(node);
+    function processNode(node: MindMapNode, x: number, level: number): number {
+        if (hiddenNodeIds.has(node.id)) return 0;
         
+        const nodeWithNewPosition = { ...node, x, y: currentY };
+        reorderedVisibleNodes.push(nodeWithNewPosition);
+        
+        const startY = currentY;
         currentY += nodeHeight + nodeGap;
-
-        if (node.isCollapsed) return;
-
-        const children = links
-            .filter(l => l.sourceId === nodeId)
-            .map(l => visibleNodeMap.get(l.targetId))
-            .filter((n): n is MindMapNode => !!n && !hiddenNodeIds.has(n.id));
-
-        if (children.length > 0) {
-             children.forEach(child => {
-                processNode(child.id, x + indent, level + 1);
+        
+        if (!node.isCollapsed) {
+            const children = links
+                .filter(l => l.sourceId === node.id)
+                .map(l => nodes.find(n => n.id === l.targetId))
+                .filter((n): n is MindMapNode => !!n);
+            
+            children.forEach(child => {
+                processNode(child, x + indent, level + 1);
             });
         }
+        return currentY - startY;
     }
 
     rootNodes.forEach(rootNode => {
-        processNode(rootNode.id, 20, 0);
+        processNode(rootNode, 20, 0);
     });
-    
-    const visibleNodeIds = new Set(reorderedVisibleNodes.map(n => n.id));
-    const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
-    
+
     return { visibleNodes: reorderedVisibleNodes, visibleLinks: finalVisibleLinks };
-  }, [nodes, links]);
-  
+}, [nodes, links, getDescendantIds]);
+
   const handleAddNode = (type: 'folder' | 'canvas') => {
     let newNode: MindMapNode;
     let newLink: MindMapLink | null = null;
-
-    const parentNode = selectedNodeId ? visibleNodes.find(n => n.id === selectedNodeId) : null;
+  
+    const parentNode = selectedNodeId ? nodes.find(n => n.id === selectedNodeId) : null;
     const nodeHeight = 60;
     const nodeWidth = 150;
     const nodeGap = 20;
     const indent = 40;
-    
-    let newY: number;
+  
     let newX: number;
+    let newY: number;
     
     if (type === 'folder') {
-        if (parentNode && parentNode.type === 'folder') {
-            const allDescendantIds = getDescendantIds(parentNode.id, links);
-            const visibleDescendantIds = allDescendantIds.filter(id => visibleNodes.some(vn => vn.id === id));
-            
-            let lastRelevantNode = parentNode;
-            if (!parentNode.isCollapsed && visibleDescendantIds.length > 0) {
-               const lastDescendant = visibleNodes
-                .filter(n => visibleDescendantIds.includes(n.id))
-                .sort((a,b) => b.y - a.y)[0];
-               if (lastDescendant) lastRelevantNode = lastDescendant;
-            }
-
-            newY = lastRelevantNode.y + nodeHeight + nodeGap;
-            newX = parentNode.x + indent;
-            
-            newNode = {
-                id: `n-${Date.now()}`,
-                x: newX,
-                y: newY,
-                text: "New Folder",
-                type: "folder",
-                color: "#60a5fa",
-                width: nodeWidth,
-                height: nodeHeight,
-            };
-
-            newLink = {
-              id: `l-${Date.now()}`,
-              sourceId: parentNode.id,
-              targetId: newNode.id,
-            };
-
-        } else {
-            const lastNode = visibleNodes.length > 0 ? [...visibleNodes].sort((a, b) => b.y - a.y)[0] : null;
-            newY = lastNode ? lastNode.y + nodeHeight + nodeGap : 20;
-            newX = 20;
-            
-            newNode = {
-                id: `n-${Date.now()}`,
-                x: newX,
-                y: newY,
-                text: "New Folder",
-                type: "folder",
-                color: "#60a5fa",
-                width: nodeWidth,
-                height: nodeHeight,
-            };
-        }
-    } else { // canvas
-        const canvasParentNode = parentNode || nodes.find(n => n.id === '1'); 
-
-        if (!canvasParentNode) return;
+      if (parentNode && parentNode.type === 'folder') {
+        newX = parentNode.x + indent;
         
-        newX = canvasParentNode.x + canvasParentNode.width + 50;
-        newY = canvasParentNode.y;
+        const allDescendantIds = getDescendantIds(parentNode.id);
+        const visibleDescendants = nodes.filter(n => allDescendantIds.includes(n.id) && visibleNodes.some(vn => vn.id === n.id));
+        
+        let lastRelevantNode: MindMapNode = parentNode;
+        if (!parentNode.isCollapsed && visibleDescendants.length > 0) {
+          lastRelevantNode = visibleDescendants.reduce((latest, current) => latest.y > current.y ? latest : current, visibleDescendants[0]);
+        }
+        
+        const parentVisibleNode = visibleNodes.find(n => n.id === lastRelevantNode.id);
+        newY = (parentVisibleNode?.y ?? lastRelevantNode.y) + nodeHeight + nodeGap;
 
         newNode = {
-            id: `n-${Date.now()}`,
-            x: newX,
-            y: newY,
-            text: "New Canvas",
-            type: type,
-            color: "#a7f3d0",
-            width: nodeWidth,
-            height: nodeHeight,
+          id: `n-${Date.now()}`,
+          x: newX,
+          y: newY,
+          text: "New Folder",
+          type: "folder",
+          color: "#60a5fa",
+          width: nodeWidth,
+          height: nodeHeight,
         };
-        
-        if (canvasParentNode) {
-            newLink = {
-              id: `l-${Date.now()}`,
-              sourceId: canvasParentNode.id,
-              targetId: newNode.id,
-            }
-        }
+  
+        newLink = {
+          id: `l-${Date.now()}`,
+          sourceId: parentNode.id,
+          targetId: newNode.id,
+        };
+  
+      } else { // creating a root folder
+        newX = 20;
+        const lastVisibleNode = visibleNodes.length > 0 ? visibleNodes[visibleNodes.length - 1] : null;
+        newY = lastVisibleNode ? lastVisibleNode.y + nodeHeight + nodeGap : 20;
+  
+        newNode = {
+          id: `n-${Date.now()}`,
+          x: newX,
+          y: newY,
+          text: "New Folder",
+          type: "folder",
+          color: "#60a5fa",
+          width: nodeWidth,
+          height: nodeHeight,
+        };
+      }
+    } else { // canvas
+      const canvasParentNode = parentNode || nodes.find(n => n.id === '1');
+  
+      if (!canvasParentNode) return;
+  
+      const parentVisibleNode = visibleNodes.find(n => n.id === canvasParentNode.id);
+      
+      newX = (parentVisibleNode?.x ?? canvasParentNode.x) + canvasParentNode.width + 50;
+      newY = parentVisibleNode?.y ?? canvasParentNode.y;
+  
+      newNode = {
+        id: `n-${Date.now()}`,
+        x: newX,
+        y: newY,
+        text: "New Canvas",
+        type: type,
+        color: "#a7f3d0",
+        width: nodeWidth,
+        height: nodeHeight,
+      };
+  
+      if (canvasParentNode) {
+        newLink = {
+          id: `l-${Date.now()}`,
+          sourceId: canvasParentNode.id,
+          targetId: newNode.id,
+        };
+      }
     }
     
-    let updatedNodes = [...nodes, newNode];
-    let updatedLinks = newLink ? [...links, newLink] : [...links];
-
-    setNodes(updatedNodes);
-    setLinks(updatedLinks);
+    let intermediateNodes = [...nodes, newNode];
+    if (newLink) {
+        setLinks(prev => [...prev, newLink!]);
+    }
+  
+    setNodes(intermediateNodes);
     setSelectedNodeId(newNode.id);
   };
   
