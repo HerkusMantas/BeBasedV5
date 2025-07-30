@@ -17,6 +17,8 @@ import {
   Paintbrush,
   Sun,
   Moon,
+  PanelBottom,
+  PanelBottomClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +69,7 @@ export default function MindMapEditor() {
   const svgRef = useRef<SVGSVGElement>(null);
   const [theme, setTheme] = useState("dark");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
 
   const db = getFirestore(storage.app);
   const mindMapDocRef = doc(db, "mindmaps", "main");
@@ -481,7 +484,7 @@ export default function MindMapEditor() {
         </div>
       </header>
 
-      <main className="flex flex-1 overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 relative bg-grid-slate-100 dark:bg-grid-slate-800/[0.6]">
           <svg
             ref={svgRef}
@@ -591,99 +594,112 @@ export default function MindMapEditor() {
            {linkingState && <div className="absolute top-4 left-4 bg-primary text-primary-foreground rounded-md px-3 py-1 text-sm shadow-lg">Select a target node to create a link. Click background to cancel.</div>}
         </div>
 
-        <aside className="w-80 border-l p-4 flex flex-col gap-6 overflow-y-auto shrink-0">
-          {selectedNode ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Node Properties</CardTitle>
-                <CardDescription>
-                  Type: {selectedNode.type.charAt(0).toUpperCase() + selectedNode.type.slice(1)}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="node-text">Text</Label>
-                  <Textarea
-                    id="node-text"
-                    value={selectedNode.text}
-                    onChange={(e) => handleUpdateNode(selectedNodeId!, {text: e.target.value})}
-                  />
-                </div>
-                {selectedNode.type === 'canvas' && <div className="space-y-2">
-                  <Label htmlFor="node-color">Color</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="node-color"
-                      type="color"
-                      value={selectedNode.color}
-                      onChange={(e) => handleUpdateNode(selectedNodeId!, {color: e.target.value})}
-                      className="p-1 h-10"
-                    />
-                    <Palette className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>}
-                <Separator />
-                <div className="flex gap-2">
-                    <Button onClick={handleStartLinking} size="sm" className="w-full">
-                        <Link2 className="mr-2 h-4 w-4" /> Link Node
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={handleDeleteNode}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete node</span>
-                    </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="text-center">
-              <CardHeader>
-                <CardTitle>Welcome to Mind Weaver</CardTitle>
-                <CardDescription>Select a node to see its properties or add a new one to get started.</CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+        <div className="relative border-t bg-background">
+             <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute -top-10 right-2 z-10"
+                onClick={() => setIsPropertiesPanelOpen(prev => !prev)}
+            >
+                {isPropertiesPanelOpen ? <PanelBottomClose /> : <PanelBottom />}
+                <span className="sr-only">Toggle Properties Panel</span>
+             </Button>
+            {isPropertiesPanelOpen && (
+                 <div className="p-4 flex flex-row gap-6 overflow-x-auto">
+                    {selectedNode ? (
+                        <Card className="min-w-80">
+                        <CardHeader>
+                            <CardTitle>Node Properties</CardTitle>
+                            <CardDescription>
+                            Type: {selectedNode.type.charAt(0).toUpperCase() + selectedNode.type.slice(1)}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                            <Label htmlFor="node-text">Text</Label>
+                            <Textarea
+                                id="node-text"
+                                value={selectedNode.text}
+                                onChange={(e) => handleUpdateNode(selectedNodeId!, {text: e.target.value})}
+                            />
+                            </div>
+                            {selectedNode.type === 'canvas' && <div className="space-y-2">
+                            <Label htmlFor="node-color">Color</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                id="node-color"
+                                type="color"
+                                value={selectedNode.color}
+                                onChange={(e) => handleUpdateNode(selectedNodeId!, {color: e.target.value})}
+                                className="p-1 h-10"
+                                />
+                                <Palette className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            </div>}
+                            <Separator />
+                            <div className="flex gap-2">
+                                <Button onClick={handleStartLinking} size="sm" className="w-full">
+                                    <Link2 className="mr-2 h-4 w-4" /> Link Node
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={handleDeleteNode}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete node</span>
+                                </Button>
+                            </div>
+                        </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="w-full text-center">
+                        <CardHeader>
+                            <CardTitle>Welcome to Mind Weaver</CardTitle>
+                            <CardDescription>Select a node to see its properties or add a new one to get started.</CardDescription>
+                        </CardHeader>
+                        </Card>
+                    )}
 
-          {selectedNode && (
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Concept Suggestions</CardTitle>
-                <CardDescription>Generate related ideas for the selected node.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button onClick={handleSuggestConcepts} disabled={isLoadingAi} className="w-full">
-                  {isLoadingAi ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <BrainCircuit className="mr-2 h-4 w-4" />
-                  )}
-                  Suggest Concepts
-                </Button>
-                {aiSuggestions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Suggestions:</Label>
-                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                      {aiSuggestions.map((suggestion, i) => (
-                        <Button
-                          key={i}
-                          variant="ghost"
-                          size="sm"
-                          className="justify-start"
-                          onClick={() => handleAddSuggestedNode(suggestion)}
-                        >
-                            <Plus className="mr-2 h-4 w-4" /> {suggestion}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </aside>
+                    {selectedNode && (
+                        <Card className="min-w-80">
+                        <CardHeader>
+                            <CardTitle>AI Concept Suggestions</CardTitle>
+                            <CardDescription>Generate related ideas for the selected node.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Button onClick={handleSuggestConcepts} disabled={isLoadingAi} className="w-full">
+                            {isLoadingAi ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <BrainCircuit className="mr-2 h-4 w-4" />
+                            )}
+                            Suggest Concepts
+                            </Button>
+                            {aiSuggestions.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>Suggestions:</Label>
+                                <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                                {aiSuggestions.map((suggestion, i) => (
+                                    <Button
+                                    key={i}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="justify-start"
+                                    onClick={() => handleAddSuggestedNode(suggestion)}
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" /> {suggestion}
+                                    </Button>
+                                ))}
+                                </div>
+                            </div>
+                            )}
+                        </CardContent>
+                        </Card>
+                    )}
+                </div>
+            )}
+        </div>
       </main>
     </div>
   );
