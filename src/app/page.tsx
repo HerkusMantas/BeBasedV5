@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, useCallback, type ChangeEvent, useMemo } from "react";
+import { useState, useRef, useCallback, type ChangeEvent, useMemo, useEffect } from "react";
 import {
   BrainCircuit,
   Plus,
@@ -15,6 +15,8 @@ import {
   ChevronDown,
   Folder,
   Paintbrush,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +62,28 @@ export default function MindMapEditor() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const [theme, setTheme] = useState("light");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "light";
+    setTheme(savedTheme);
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
 
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
@@ -103,99 +127,98 @@ export default function MindMapEditor() {
   };
   
   const { visibleNodes, visibleLinks } = useMemo(() => {
-        const hiddenNodeIds = new Set<string>();
+    const hiddenNodeIds = new Set<string>();
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-        const nodeMapForHiding = new Map(nodes.map(n => [n.id, n]));
-        
-        function hideChildren(nodeId: string) {
-            const childrenLinks = links.filter(l => l.sourceId === nodeId);
-            for (const link of childrenLinks) {
-                const childId = link.targetId;
-                hiddenNodeIds.add(childId);
-                const childNode = nodeMapForHiding.get(childId);
-                if (childNode && childNode.type === 'folder') {
-                    hideChildren(childId);
-                }
+    function hideChildren(nodeId: string) {
+        if (!nodeMap.has(nodeId)) return;
+        const childrenLinks = links.filter(l => l.sourceId === nodeId);
+        for (const link of childrenLinks) {
+            const childId = link.targetId;
+            hiddenNodeIds.add(childId);
+            const childNode = nodeMap.get(childId);
+            if (childNode && childNode.isCollapsed) {
+                // If a child is collapsed, we need to hide its children too
+                hideChildren(childId);
             }
         }
-        
-        nodes.forEach(node => {
-            if (node.isCollapsed) {
-                hideChildren(node.id);
-            }
-        });
+    }
 
-        const currentVisibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
-        const nodeMap = new Map(currentVisibleNodes.map(n => [n.id, {...n}]));
-        const reorderedVisibleNodes: MindMapNode[] = [];
-
-        const rootNodeIds = new Set(currentVisibleNodes.map(n => n.id));
-        links.forEach(link => {
-            if (hiddenNodeIds.has(link.sourceId)) return;
-            // Also check if target is hidden, which can happen if a child is hidden but parent is not
-             if (hiddenNodeIds.has(link.targetId)) {
-                // This link should not be used for root calculation if its target is hidden
-                return;
-            }
-            if(nodeMap.has(link.sourceId)) {
-                rootNodeIds.delete(link.targetId);
-            }
-        });
-
-        const rootNodes = Array.from(rootNodeIds)
-            .map(id => nodeMap.get(id)!)
-            .filter(Boolean)
-            .sort((a,b) => a.y - b.y);
-
-        let currentY = 20;
-        const nodeHeight = 60;
-        const nodeGap = 20;
-
-        function processNode(nodeId: string, x: number, level: number) {
-            const node = nodeMap.get(nodeId);
-            if (!node) return;
-
-            node.x = x;
-            node.y = currentY;
-            reorderedVisibleNodes.push(node);
-            
-            currentY += nodeHeight + nodeGap;
-
-            const children = links
-                .filter(l => l.sourceId === nodeId)
-                .map(l => nodeMap.get(l.targetId))
-                .filter((n): n is MindMapNode => !!n && !hiddenNodeIds.has(n.id));
-
-            if (children.length > 0) {
-                 const childIndent = 80;
-                 children.forEach(child => {
-                    processNode(child.id, x + childIndent, level + 1);
-                });
-            }
+    nodes.forEach(node => {
+        if (node.isCollapsed) {
+            hideChildren(node.id);
         }
+    });
 
-        rootNodes.forEach(rootNode => {
-            processNode(rootNode.id, 20, 0);
-        });
+    const currentVisibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
+    const visibleNodeMap = new Map(currentVisibleNodes.map(n => [n.id, {...n}]));
+    const reorderedVisibleNodes: MindMapNode[] = [];
+
+    const rootNodeIds = new Set(currentVisibleNodes.map(n => n.id));
+    links.forEach(link => {
+        if (hiddenNodeIds.has(link.sourceId) || hiddenNodeIds.has(link.targetId)) return;
+        if(visibleNodeMap.has(link.sourceId)) {
+            rootNodeIds.delete(link.targetId);
+        }
+    });
+
+    const rootNodes = Array.from(rootNodeIds)
+        .map(id => visibleNodeMap.get(id)!)
+        .filter(Boolean)
+        .sort((a,b) => a.y - b.y);
+
+    let currentY = 20;
+    const nodeHeight = 60;
+    const nodeGap = 20;
+    const indent = 40; 
+
+    function processNode(nodeId: string, x: number, level: number) {
+        const node = visibleNodeMap.get(nodeId);
+        if (!node) return;
+
+        node.x = x;
+        node.y = currentY;
+        reorderedVisibleNodes.push(node);
         
-        const visibleNodeIds = new Set(reorderedVisibleNodes.map(n => n.id));
-        const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
-        
-        return { visibleNodes: reorderedVisibleNodes, visibleLinks: finalVisibleLinks };
-    }, [nodes, links, getDescendantIds]);
+        currentY += nodeHeight + nodeGap;
+
+        if (node.isCollapsed) return;
+
+        const children = links
+            .filter(l => l.sourceId === nodeId)
+            .map(l => visibleNodeMap.get(l.targetId))
+            .filter((n): n is MindMapNode => !!n && !hiddenNodeIds.has(n.id));
+
+        if (children.length > 0) {
+             children.forEach(child => {
+                processNode(child.id, x + indent, level + 1);
+            });
+        }
+    }
+
+    rootNodes.forEach(rootNode => {
+        processNode(rootNode.id, 20, 0);
+    });
+    
+    const visibleNodeIds = new Set(reorderedVisibleNodes.map(n => n.id));
+    const finalVisibleLinks = links.filter(l => visibleNodeIds.has(l.sourceId) && visibleNodeIds.has(l.targetId));
+    
+    return { visibleNodes: reorderedVisibleNodes, visibleLinks: finalVisibleLinks };
+  }, [nodes, links]);
   
   const handleAddNode = (type: 'folder' | 'canvas') => {
     let newNode: MindMapNode;
     let newLink: MindMapLink | null = null;
-    let newNodes: MindMapNode[] = [...nodes];
-    let newLinks: MindMapLink[] = [...links];
 
     const parentNode = selectedNodeId ? visibleNodes.find(n => n.id === selectedNodeId) : null;
     const nodeHeight = 60;
     const nodeWidth = 150;
     const nodeGap = 20;
-    const indent = 80;
-
+    const indent = 40;
+    
+    let newY: number;
+    let newX: number;
+    
     if (type === 'folder') {
         if (parentNode && parentNode.type === 'folder') {
             const allDescendantIds = getDescendantIds(parentNode.id, links);
@@ -208,12 +231,13 @@ export default function MindMapEditor() {
                 .sort((a,b) => b.y - a.y)[0];
                if (lastDescendant) lastRelevantNode = lastDescendant;
             }
-            
-            const newY = lastRelevantNode.y + nodeHeight + nodeGap;
 
+            newY = lastRelevantNode.y + nodeHeight + nodeGap;
+            newX = parentNode.x + indent;
+            
             newNode = {
                 id: `n-${Date.now()}`,
-                x: parentNode.x + indent,
+                x: newX,
                 y: newY,
                 text: "New Folder",
                 type: "folder",
@@ -227,17 +251,15 @@ export default function MindMapEditor() {
               sourceId: parentNode.id,
               targetId: newNode.id,
             };
-            
-            newNodes.push(newNode);
-            if (newLink) newLinks.push(newLink);
 
         } else {
             const lastNode = visibleNodes.length > 0 ? [...visibleNodes].sort((a, b) => b.y - a.y)[0] : null;
-            const newY = lastNode ? lastNode.y + lastNode.height + nodeGap : 20;
+            newY = lastNode ? lastNode.y + nodeHeight + nodeGap : 20;
+            newX = 20;
             
             newNode = {
                 id: `n-${Date.now()}`,
-                x: 20,
+                x: newX,
                 y: newY,
                 text: "New Folder",
                 type: "folder",
@@ -245,25 +267,25 @@ export default function MindMapEditor() {
                 width: nodeWidth,
                 height: nodeHeight,
             };
-            newNodes.push(newNode);
         }
     } else { // canvas
         const canvasParentNode = parentNode || nodes.find(n => n.id === '1'); 
 
         if (!canvasParentNode) return;
+        
+        newX = canvasParentNode.x + canvasParentNode.width + 50;
+        newY = canvasParentNode.y;
 
         newNode = {
             id: `n-${Date.now()}`,
-            x: canvasParentNode.x + canvasParentNode.width + 50,
-            y: canvasParentNode.y,
+            x: newX,
+            y: newY,
             text: "New Canvas",
             type: type,
             color: "#a7f3d0",
             width: nodeWidth,
             height: nodeHeight,
         };
-
-        newNodes.push(newNode);
         
         if (canvasParentNode) {
             newLink = {
@@ -271,12 +293,14 @@ export default function MindMapEditor() {
               sourceId: canvasParentNode.id,
               targetId: newNode.id,
             }
-            newLinks.push(newLink);
         }
     }
     
-    setNodes(newNodes);
-    setLinks(newLinks);
+    let updatedNodes = [...nodes, newNode];
+    let updatedLinks = newLink ? [...links, newLink] : [...links];
+
+    setNodes(updatedNodes);
+    setLinks(updatedLinks);
     setSelectedNodeId(newNode.id);
   };
   
@@ -428,6 +452,11 @@ export default function MindMapEditor() {
           <Button variant="outline" size="sm" onClick={() => handleAddNode('canvas')}><Paintbrush className="mr-2 h-4 w-4" /> New Canvas</Button>
           <Button variant="outline" size="sm" onClick={handleSave}><Download className="mr-2 h-4 w-4" /> Save</Button>
           <Button variant="outline" size="sm" onClick={handleLoadClick}><Upload className="mr-2 h-4 w-4" /> Load</Button>
+          <Button variant="outline" size="icon" onClick={toggleTheme}>
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
         </div>
       </header>
@@ -484,7 +513,7 @@ export default function MindMapEditor() {
                     "transition-all duration-200",
                     selectedNodeId === node.id || (linkingState && linkingState.sourceId === node.id)
                       ? "stroke-primary stroke-[3px]"
-                      : "stroke-black/30 stroke-2",
+                      : "stroke-black/30 dark:stroke-white/30 stroke-2",
                     "group-hover:stroke-primary group-hover:stroke-2"
                   )}
                 />
@@ -493,15 +522,15 @@ export default function MindMapEditor() {
                   y={node.height / 2}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="fill-gray-800 font-semibold pointer-events-none select-none"
+                  className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
                 >
                   {node.text}
                 </text>
                  {hasChildren(node.id) && node.type === 'folder' && (
                     <g transform={`translate(${node.width / 2 - 8}, ${node.height - 20})`}>
                        {node.isCollapsed 
-                       ? <ChevronDown className="w-4 h-4 text-gray-800" /> 
-                       : <ChevronUp className="w-4 h-4 text-gray-800" />
+                       ? <ChevronDown className="w-4 h-4 text-gray-800 dark:text-gray-200" /> 
+                       : <ChevronUp className="w-4 h-4 text-gray-800 dark:text-gray-200" />
                        }
                     </g>
                 )}
@@ -611,3 +640,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
