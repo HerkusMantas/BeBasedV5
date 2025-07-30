@@ -19,6 +19,7 @@ import {
   Moon,
   PanelBottom,
   PanelBottomClose,
+  Type,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ const initialNodes: MindMapNode[] = [
     color: "#60a5fa",
     width: 150,
     height: 30,
+    textColor: "#111827",
   },
 ];
 
@@ -70,6 +72,10 @@ export default function MindMapEditor() {
   const [theme, setTheme] = useState("dark");
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
+  const [globalSettings, setGlobalSettings] = useState({
+    backgroundColor: "#ffffff",
+    nodeTextColor: "#111827",
+  });
 
   const db = getFirestore(storage.app);
   const mindMapDocRef = doc(db, "mindmaps", "main");
@@ -77,7 +83,7 @@ export default function MindMapEditor() {
   const saveData = useCallback(async (nodesToSave: MindMapNode[], linksToSave: MindMapLink[]) => {
       if (!isLoaded) return;
       try {
-        await setDoc(mindMapDocRef, { nodes: nodesToSave, links: linksToSave });
+        await setDoc(mindMapDocRef, { nodes: nodesToSave, links: linksToSave, globalSettings });
       } catch (error) {
         console.error("Error saving mind map:", error);
         toast({
@@ -86,7 +92,7 @@ export default function MindMapEditor() {
             description: "Could not save changes to the cloud.",
         });
       }
-  }, [mindMapDocRef, toast, isLoaded]);
+  }, [mindMapDocRef, toast, isLoaded, globalSettings]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -96,6 +102,7 @@ export default function MindMapEditor() {
                 const data = docSnap.data();
                 setNodes(data.nodes || initialNodes);
                 setLinks(data.links || initialLinks);
+                setGlobalSettings(data.globalSettings || { backgroundColor: "#ffffff", nodeTextColor: "#111827" });
             } else {
                 setNodes(initialNodes);
                 setLinks(initialLinks);
@@ -120,7 +127,7 @@ export default function MindMapEditor() {
     if(isLoaded) {
         saveData(nodes, links);
     }
-  }, [nodes, links, saveData, isLoaded]);
+  }, [nodes, links, globalSettings, saveData, isLoaded]);
 
 
   useEffect(() => {
@@ -142,6 +149,10 @@ export default function MindMapEditor() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  };
+  
+  const handleUpdateGlobalSettings = (newSettings: Partial<typeof globalSettings>) => {
+    setGlobalSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
@@ -188,7 +199,6 @@ export default function MindMapEditor() {
   const { visibleNodes, visibleLinks } = useMemo(() => {
     let reorderedVisibleNodes: MindMapNode[] = [];
     const hiddenNodeIds = new Set<string>();
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
   
     nodes.forEach(node => {
         if (node.isCollapsed) {
@@ -270,6 +280,7 @@ export default function MindMapEditor() {
         color: "#60a5fa",
         width: nodeWidth,
         height: folderHeight,
+        textColor: globalSettings.nodeTextColor
       };
 
       if (parentNode) {
@@ -299,6 +310,7 @@ export default function MindMapEditor() {
         color: "#a7f3d0",
         width: nodeWidth,
         height: canvasHeight,
+        textColor: globalSettings.nodeTextColor
       };
   
       if (canvasParentNode) {
@@ -320,6 +332,15 @@ export default function MindMapEditor() {
   const handleUpdateNode = (id: string, newProps: Partial<MindMapNode>) => {
     setNodes(nodes.map(n => n.id === id ? {...n, ...newProps} : n));
   };
+  
+  useEffect(() => {
+    setNodes(prevNodes => 
+        prevNodes.map(node => ({
+            ...node,
+            textColor: globalSettings.nodeTextColor,
+        }))
+    )
+  }, [globalSettings.nodeTextColor]);
 
   const handleDeleteNode = () => {
     if (!selectedNodeId) return;
@@ -373,7 +394,8 @@ export default function MindMapEditor() {
       type: "canvas",
       color: "#fde68a",
       width: 150,
-      height: 50,
+      height: 60,
+      textColor: globalSettings.nodeTextColor,
     };
     const newLink: MindMapLink = {
         id: `l-${Date.now()}`,
@@ -387,7 +409,7 @@ export default function MindMapEditor() {
   }
 
   const handleSave = () => {
-    const data = JSON.stringify({ nodes, links }, null, 2);
+    const data = JSON.stringify({ nodes, links, globalSettings }, null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -413,6 +435,9 @@ export default function MindMapEditor() {
         if (data.nodes && data.links) {
           setNodes(data.nodes);
           setLinks(data.links);
+          if (data.globalSettings) {
+              setGlobalSettings(data.globalSettings);
+          }
           setSelectedNodeId(null);
           toast({ title: "Success", description: "Mind map loaded successfully." });
         } else {
@@ -485,7 +510,7 @@ export default function MindMapEditor() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 relative bg-grid-slate-100 dark:bg-grid-slate-800/[0.6]">
+        <div className="flex-1 relative" style={{ backgroundColor: globalSettings.backgroundColor }}>
           <svg
             ref={svgRef}
             className="w-full h-full cursor-default"
@@ -554,13 +579,14 @@ export default function MindMapEditor() {
 
                 {node.type === 'folder' ? (
                    <g transform={`translate(0, ${node.height / 2})`}>
-                      <Folder className="w-5 h-5 text-gray-800 dark:text-gray-200" style={{ transform: `translateY(-50%)` }} />
+                      <Folder className="w-5 h-5" style={{ transform: `translateY(-50%)`, color: node.textColor }} />
                       <text
                         x={28}
                         y={0}
                         textAnchor="start"
                         dominantBaseline="central"
-                        className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
+                        className="font-semibold pointer-events-none select-none"
+                        style={{ fill: node.textColor }}
                       >
                         {node.text}
                       </text>
@@ -571,7 +597,8 @@ export default function MindMapEditor() {
                     y={node.height / 2}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    className="fill-gray-800 dark:fill-gray-200 font-semibold pointer-events-none select-none"
+                    className="font-semibold pointer-events-none select-none"
+                    style={{ fill: node.textColor }}
                   >
                     {node.text}
                   </text>
@@ -580,8 +607,8 @@ export default function MindMapEditor() {
                  {hasChildren(node.id) && node.type === 'folder' && (
                     <g transform={`translate(-16, ${node.height / 2 - 8})`}>
                        {node.isCollapsed 
-                       ? <ChevronDown className="w-4 h-4 text-gray-800 dark:text-gray-200" /> 
-                       : <ChevronUp className="w-4 h-4 text-gray-800 dark:text-gray-200" />
+                       ? <ChevronDown className="w-4 h-4" style={{ color: node.textColor }} /> 
+                       : <ChevronUp className="w-4 h-4" style={{ color: node.textColor }} />
                        }
                     </g>
                 )}
@@ -636,6 +663,19 @@ export default function MindMapEditor() {
                                 <Palette className="h-5 w-5 text-muted-foreground" />
                             </div>
                             </div>}
+                            <div className="space-y-2">
+                                <Label htmlFor="node-text-color">Text Color</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                    id="node-text-color"
+                                    type="color"
+                                    value={selectedNode.textColor}
+                                    onChange={(e) => handleUpdateNode(selectedNodeId!, {textColor: e.target.value})}
+                                    className="p-1 h-10"
+                                    />
+                                    <Type className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                            </div>
                             <Separator />
                             <div className="flex gap-2">
                                 <Button onClick={handleStartLinking} size="sm" className="w-full">
@@ -653,11 +693,39 @@ export default function MindMapEditor() {
                         </CardContent>
                         </Card>
                     ) : (
-                        <Card className="w-full text-center">
-                        <CardHeader>
-                            <CardTitle>Welcome to Mind Weaver</CardTitle>
-                            <CardDescription>Select a node to see its properties or add a new one to get started.</CardDescription>
-                        </CardHeader>
+                        <Card className="min-w-80">
+                            <CardHeader>
+                                <CardTitle>Global Properties</CardTitle>
+                                <CardDescription>Manage the look of the entire mind map.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="bg-color">Background Color</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="bg-color"
+                                        type="color"
+                                        value={globalSettings.backgroundColor}
+                                        onChange={(e) => handleUpdateGlobalSettings({backgroundColor: e.target.value})}
+                                        className="p-1 h-10"
+                                        />
+                                        <Palette className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="node-text-color-global">Node Text Color</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="node-text-color-global"
+                                        type="color"
+                                        value={globalSettings.nodeTextColor}
+                                        onChange={(e) => handleUpdateGlobalSettings({nodeTextColor: e.target.value})}
+                                        className="p-1 h-10"
+                                        />
+                                        <Type className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
                     )}
 
@@ -704,5 +772,3 @@ export default function MindMapEditor() {
     </div>
   );
 }
-
-    

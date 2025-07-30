@@ -8,6 +8,7 @@ export interface MindMapNode {
   width: number;
   height: number;
   isCollapsed?: boolean;
+  textColor: string;
 }
 
 export interface MindMapLink {
