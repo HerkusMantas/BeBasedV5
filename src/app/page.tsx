@@ -40,6 +40,47 @@ import { suggestConcepts } from "@/ai/flows/suggest-concepts";
 import { storage } from "@/lib/firebase";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
+const hslToHex = (h: number, s: number, l: number): string => {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+const hexToHsl = (hex: string): { h: number, s: number, l: number } => {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+        r = parseInt(hex[1] + hex[2], 16);
+        g = parseInt(hex[3] + hex[4], 16);
+        b = parseInt(hex[5] + hex[6], 16);
+    }
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
 
 const initialNodes: MindMapNode[] = [
   {
@@ -57,6 +98,17 @@ const initialNodes: MindMapNode[] = [
 
 const initialLinks: MindMapLink[] = [];
 
+const defaultGlobalSettings = {
+    canvasColor: "#292929",
+    nodeTextColor: "#FFFFFF",
+    theme: {
+        backgroundHsl: "222.2 84% 4.9%",
+        foregroundHsl: "210 40% 98%",
+        accentHsl: "262.1 83.3% 57.8%",
+        borderHsl: "217.2 32.6% 17.5%",
+    }
+}
+
 export default function MindMapEditor() {
   const { toast } = useToast();
   const [nodes, setNodes] = useState<MindMapNode[]>([]);
@@ -72,10 +124,7 @@ export default function MindMapEditor() {
   const [theme, setTheme] = useState("dark");
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
-  const [globalSettings, setGlobalSettings] = useState({
-    backgroundColor: "#292929",
-    nodeTextColor: "#FFFFFF",
-  });
+  const [globalSettings, setGlobalSettings] = useState(defaultGlobalSettings);
 
   const db = getFirestore(storage.app);
   const mindMapDocRef = doc(db, "mindmaps", "main");
@@ -102,10 +151,11 @@ export default function MindMapEditor() {
                 const data = docSnap.data();
                 setNodes(data.nodes || initialNodes);
                 setLinks(data.links || initialLinks);
-                setGlobalSettings(data.globalSettings || { backgroundColor: "#292929", nodeTextColor: "#FFFFFF" });
+                setGlobalSettings(data.globalSettings || defaultGlobalSettings);
             } else {
                 setNodes(initialNodes);
                 setLinks(initialLinks);
+                setGlobalSettings(defaultGlobalSettings);
             }
         } catch (error) {
             console.error("Error loading mind map:", error);
@@ -128,6 +178,31 @@ export default function MindMapEditor() {
         saveData(nodes, links);
     }
   }, [nodes, links, globalSettings, saveData, isLoaded]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const root = document.documentElement;
+        const { backgroundHsl, foregroundHsl, accentHsl, borderHsl } = globalSettings.theme;
+
+        const setVar = (name: string, value: string) => {
+             const [h, s, l] = value.split(' ').map(v => v.replace('%', ''));
+             root.style.setProperty(name, `${h} ${s}% ${l}%`);
+             if (name === '--background') {
+                 root.style.setProperty('--card', `${h} ${s}% ${l}%`);
+                 root.style.setProperty('--popover', `${h} ${s}% ${l}%`);
+             }
+             if (name === '--foreground') {
+                  root.style.setProperty('--card-foreground', `${h} ${s}% ${l}%`);
+                  root.style.setProperty('--popover-foreground', `${h} ${s}% ${l}%`);
+             }
+        }
+        setVar('--background', backgroundHsl);
+        setVar('--foreground', foregroundHsl);
+        setVar('--accent', accentHsl);
+        setVar('--border', borderHsl);
+        root.style.setProperty('--input', borderHsl);
+    }
+  }, [globalSettings.theme]);
 
 
   useEffect(() => {
@@ -154,6 +229,23 @@ export default function MindMapEditor() {
   const handleUpdateGlobalSettings = (newSettings: Partial<typeof globalSettings>) => {
     setGlobalSettings(prev => ({ ...prev, ...newSettings }));
   };
+
+  const handleUpdateThemeColor = (colorName: keyof typeof globalSettings.theme, hexValue: string) => {
+    const { h, s, l } = hexToHsl(hexValue);
+    const hslString = `${h} ${s}% ${l}%`;
+    setGlobalSettings(prev => ({
+        ...prev,
+        theme: {
+            ...prev.theme,
+            [colorName]: hslString
+        }
+    }));
+  };
+  
+  const getHexFromHsl = (hslString: string) => {
+      const [h, s, l] = hslString.split(' ').map(v => parseFloat(v.replace('%', '')));
+      return hslToHex(h, s, l);
+  }
 
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
 
@@ -510,7 +602,7 @@ export default function MindMapEditor() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 relative" style={{ backgroundColor: globalSettings.backgroundColor }}>
+        <div className="flex-1 relative" style={{ backgroundColor: globalSettings.canvasColor }}>
           <svg
             ref={svgRef}
             className="w-full h-full cursor-default"
@@ -696,16 +788,42 @@ export default function MindMapEditor() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="bg-color">Background Color</Label>
+                                    <Label htmlFor="canvas-color">Canvas Color</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
-                                        id="bg-color"
+                                        id="canvas-color"
                                         type="color"
-                                        value={globalSettings.backgroundColor}
-                                        onChange={(e) => handleUpdateGlobalSettings({backgroundColor: e.target.value})}
+                                        value={globalSettings.canvasColor}
+                                        onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})}
                                         className="p-1 h-10"
                                         />
                                         <Palette className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="background-color">Background</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="background-color"
+                                        type="color"
+                                        value={getHexFromHsl(globalSettings.theme.backgroundHsl)}
+                                        onChange={(e) => handleUpdateThemeColor('backgroundHsl', e.target.value)}
+                                        className="p-1 h-10"
+                                        />
+                                        <Palette className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="foreground-color">Foreground</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="foreground-color"
+                                        type="color"
+                                        value={getHexFromHsl(globalSettings.theme.foregroundHsl)}
+                                        onChange={(e) => handleUpdateThemeColor('foregroundHsl', e.target.value)}
+                                        className="p-1 h-10"
+                                        />
+                                        <Type className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                 </div>
                                  <div className="space-y-2">
@@ -719,6 +837,32 @@ export default function MindMapEditor() {
                                         className="p-1 h-10"
                                         />
                                         <Type className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="accent-color">Accent</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="accent-color"
+                                        type="color"
+                                        value={getHexFromHsl(globalSettings.theme.accentHsl)}
+                                        onChange={(e) => handleUpdateThemeColor('accentHsl', e.target.value)}
+                                        className="p-1 h-10"
+                                        />
+                                        <Palette className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="border-color">Border</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="border-color"
+                                        type="color"
+                                        value={getHexFromHsl(globalSettings.theme.borderHsl)}
+                                        onChange={(e) => handleUpdateThemeColor('borderHsl', e.target.value)}
+                                        className="p-1 h-10"
+                                        />
+                                        <Palette className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -768,3 +912,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
