@@ -914,7 +914,3 @@ export default function MindMapEditor() {
     </div>
   );
 }
-
-    
-
-    
