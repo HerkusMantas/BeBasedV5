@@ -85,10 +85,31 @@ const hexToHsl = (hex: string): { h: number, s: number, l: number } => {
 const wrapText = (text: string, charsPerLine: number) => {
     const lines: string[] = [];
     if (!text) return lines;
-    for (let i = 0; i < text.length; i += charsPerLine) {
-        lines.push(text.substring(i, i + charsPerLine));
+    let currentLine = '';
+    const words = text.split(' ');
+
+    words.forEach(word => {
+        if ((currentLine + ' ' + word).length > charsPerLine) {
+            if(currentLine.length > 0) lines.push(currentLine);
+            currentLine = word;
+             while (currentLine.length > charsPerLine) {
+                lines.push(currentLine.substring(0, charsPerLine));
+                currentLine = currentLine.substring(charsPerLine);
+            }
+        } else {
+            currentLine = currentLine ? currentLine + ' ' + word : word;
+        }
+    });
+    if (currentLine.length > 0) lines.push(currentLine);
+    
+    // If no words (e.g. long string without spaces), split by character count
+    if (text.length > 0 && lines.length === 0) {
+       for (let i = 0; i < text.length; i += charsPerLine) {
+          lines.push(text.substring(i, i + charsPerLine));
+       }
     }
-    return lines;
+
+    return lines.length > 0 ? lines : [' '];
 };
 
 const initialNodes: MindMapNode[] = [
@@ -665,7 +686,7 @@ export default function MindMapEditor() {
               />
             ))}
             {visibleNodes.map((node) => {
-              const textLines = wrapText(node.text, 12);
+              const textLines = node.type === 'canvas' ? wrapText(node.text, 12) : [node.text];
               return (
               <g
                 key={node.id}
@@ -714,7 +735,7 @@ export default function MindMapEditor() {
                       </text>
                       {hasChildren(node.id) && (
                         <g
-                           transform={`translate(${node.width - 12 + (globalSettings.iconOffsetX || 0)}, ${globalSettings.iconOffsetY || 0})`}
+                           transform={`translate(${node.width + (globalSettings.iconOffsetX || 0)}, ${node.height/2 + (globalSettings.iconOffsetY || 0)})`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
@@ -915,5 +936,3 @@ export default function MindMapEditor() {
     </div>
   );
 }
-
-    
