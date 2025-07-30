@@ -17,3 +17,13 @@ export interface MindMapLink {
   targetId: string;
   label?: string;
 }
+
+export interface GlobalTheme {
+    backgroundHsl: string;
+    foregroundHsl: string;
+    primaryHsl: string;
+    accentHsl: string;
+    borderHsl: string;
+}
+
+    

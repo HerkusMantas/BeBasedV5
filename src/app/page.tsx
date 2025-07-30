@@ -99,12 +99,13 @@ const initialNodes: MindMapNode[] = [
 const initialLinks: MindMapLink[] = [];
 
 const defaultGlobalSettings = {
-    canvasColor: "#292929",
+    canvasColor: "#0D0D0D",
     nodeTextColor: "#FFFFFF",
     theme: {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
-        accentHsl: "260 21% 72%",
+        primaryHsl: "305 25% 27%",
+        accentHsl: "261 16% 72%",
         borderHsl: "305 25% 27%",
     }
 }
@@ -182,7 +183,7 @@ export default function MindMapEditor() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const root = document.documentElement;
-        const { backgroundHsl, foregroundHsl, accentHsl, borderHsl } = globalSettings.theme;
+        const { backgroundHsl, foregroundHsl, primaryHsl, accentHsl, borderHsl } = globalSettings.theme;
 
         const setVar = (name: string, value: string) => {
              const [h, s, l] = value.split(' ').map(v => v.replace('%', ''));
@@ -198,6 +199,7 @@ export default function MindMapEditor() {
         }
         setVar('--background', backgroundHsl);
         setVar('--foreground', foregroundHsl);
+        if (primaryHsl) setVar('--primary', primaryHsl);
         setVar('--accent', accentHsl);
         setVar('--border', borderHsl);
         root.style.setProperty('--input', borderHsl);
@@ -843,6 +845,19 @@ export default function MindMapEditor() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="primary-color">Primary</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                        id="primary-color"
+                                        type="color"
+                                        value={getHexFromHsl(globalSettings.theme.primaryHsl)}
+                                        onChange={(e) => handleUpdateThemeColor('primaryHsl', e.target.value)}
+                                        className="p-1 h-10"
+                                        />
+                                        <Palette className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="accent-color">Accent</Label>
                                     <div className="flex items-center gap-2">
                                         <Input
@@ -915,3 +930,5 @@ export default function MindMapEditor() {
     </div>
   );
 }
+
+    
