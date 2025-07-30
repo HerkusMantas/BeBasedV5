@@ -106,8 +106,8 @@ const defaultGlobalSettings = {
         backgroundHsl: "0 0% 5%",
         foregroundHsl: "210 40% 98%",
         primaryHsl: "305 52% 48%",
-        accentHsl: "262 25% 72%",
-        borderHsl: "305 25% 27%",
+        accentHsl: "276 34% 78%",
+        borderHsl: "305 20% 32%",
     }
 }
 
@@ -694,13 +694,13 @@ export default function MindMapEditor() {
                       </text>
                       {hasChildren(node.id) && (
                         <g 
-                          transform={`translate(${node.width - 20}, -8)`} 
+                          transform={`translate(${node.width - 12}, 0)`} 
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleNodeCollapse(node.id);
                           }}
                         >
-                          <rect width="16" height="16" rx="4" ry="4" className="fill-transparent" />
+                          <rect width="16" height="16" rx="4" ry="4" className="fill-transparent" style={{transform: "translate(-8px, -8px)"}} />
                           {node.isCollapsed 
                             ? <Plus className="w-4 h-4 text-white" /> 
                             : <Minus className="w-4 h-4 text-white" />}
@@ -806,7 +806,7 @@ export default function MindMapEditor() {
                                 <CardDescription>Manage the look and feel of the entire application.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                 <div className="grid grid-cols-[auto_min-content] gap-x-4 gap-y-2 items-center">
                                     <Label htmlFor="canvas-color">Mind Map Background</Label>
                                     <Input id="canvas-color" type="color" value={globalSettings.canvasColor} onChange={(e) => handleUpdateGlobalSettings({canvasColor: e.target.value})} className="p-0 h-6 w-6" />
                                 
