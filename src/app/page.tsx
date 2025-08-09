@@ -40,6 +40,7 @@ import type { MindMapNode, MindMapLink } from "@/lib/types";
 import { suggestConcepts } from "@/ai/flows/suggest-concepts";
 import { storage } from "@/lib/firebase";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { ReportDialog } from "@/components/report-dialog";
 
 const hslToHex = (h: number, s: number, l: number): string => {
     l /= 100;
@@ -669,6 +670,7 @@ export default function MindMapEditor() {
           <Button variant="outline" size="sm" onClick={() => handleAddNode('canvas')}><Paintbrush className="mr-2 h-4 w-4" /> New Canvas</Button>
           <Button variant="outline" size="sm" onClick={handleSave}><Download className="mr-2 h-4 w-4" /> Save</Button>
           <Button variant="outline" size="sm" onClick={handleLoadClick}><Upload className="mr-2 h-4 w-4" /> Load</Button>
+          <ReportDialog nodes={nodes} links={links} />
           <Button variant="outline" size="icon" onClick={toggleTheme}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
